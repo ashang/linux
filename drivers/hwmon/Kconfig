@@ -884,6 +884,16 @@ config SENSORS_MAX6639
 	  This driver can also be built as a module.  If so, the module
 	  will be called max6639.
 
+config SENSORS_MAX6620
+	tristate "Maxim MAX6620 sensor chip"
+	depends on I2C
+	help
+	  If you say yes here you get support for the MAX6620
+	  sensor chips.
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called max6620.
+
 config SENSORS_MAX6642
 	tristate "Maxim MAX6642 sensor chip"
 	depends on I2C
