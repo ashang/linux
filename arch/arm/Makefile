@@ -161,7 +161,7 @@ machine-$(CONFIG_ARCH_ARTPEC)		+= artpec
 machine-$(CONFIG_ARCH_ASPEED)           += aspeed
 machine-$(CONFIG_ARCH_AT91)		+= at91
 machine-$(CONFIG_ARCH_AXXIA)		+= axxia
-machine-$(CONFIG_ARCH_BCM)		+= bcm
+machine-$(CONFIG_ARCH_BCM)		+= nsp
 machine-$(CONFIG_ARCH_BERLIN)		+= berlin
 machine-$(CONFIG_ARCH_CLPS711X)		+= clps711x
 machine-$(CONFIG_ARCH_CNS3XXX)		+= cns3xxx
@@ -227,6 +227,7 @@ machine-$(CONFIG_ARCH_VT8500)		+= vt8500
 machine-$(CONFIG_ARCH_ZX)		+= zx
 machine-$(CONFIG_ARCH_ZYNQ)		+= zynq
 machine-$(CONFIG_PLAT_SPEAR)		+= spear
+machine-$(CONFIG_ARCH_IPROC)        	+= iproc
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
@@ -312,12 +313,12 @@ archprepare:
 # Convert bzImage to zImage
 bzImage: zImage
 
-BOOT_TARGETS	= zImage Image xipImage bootpImage uImage
+BOOT_TARGETS	= zImage Image xipImage bootpImage uImage uImage-piggy
 INSTALL_TARGETS	= zinstall uinstall install
 
 PHONY += bzImage $(BOOT_TARGETS) $(INSTALL_TARGETS)
 
-bootpImage uImage: zImage
+bootpImage uImage uImage-piggy: zImage
 zImage: Image
 
 $(BOOT_TARGETS): vmlinux
@@ -346,6 +347,8 @@ define archhelp
   echo  '  Image         - Uncompressed kernel image (arch/$(ARCH)/boot/Image)'
   echo  '* xipImage      - XIP kernel image, if configured (arch/$(ARCH)/boot/xipImage)'
   echo  '  uImage        - U-Boot wrapped zImage'
+  echo  '  uImage-piggy  - U-Boot wrapped arch/arm/boot/piggy.gzip; U-Boot is'
+  echo  '                  responsible for decompressing the kernel'
   echo  '  bootpImage    - Combined zImage and initial RAM disk'
   echo  '                  (supply initrd image via make variable INITRD=<path>)'
   echo  '  install       - Install uncompressed kernel'

@@ -283,6 +283,7 @@ struct mtd_info {
 	 * see Documentation/ABI/testing/sysfs-class-mtd for more detail.
 	 */
 	unsigned int bitflip_threshold;
+	unsigned int bitflip_retirelimit;
 
 	/* Kernel-only stuff starts here. */
 	const char *name;

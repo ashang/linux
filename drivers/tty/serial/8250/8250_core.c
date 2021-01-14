@@ -55,7 +55,7 @@ static struct uart_driver serial8250_reg;
 
 static unsigned int skip_txen_test; /* force skip of txen test at init time */
 
-#define PASS_LIMIT	512
+#define PASS_LIMIT	1024
 
 #include <asm/serial.h>
 /*

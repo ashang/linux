@@ -63,6 +63,23 @@ static const int rpm_ranges[] = { 2000, 4000, 8000, 16000 };
 				0 : (rpm_ranges[rpm_range] * 30) / (val))
 #define TEMP_LIMIT_TO_REG(val)	clamp_val((val) / 1000, 0, 255)
 
+static unsigned int rpm_range_index = 1;
+module_param(rpm_range_index, uint, S_IRUGO);
+MODULE_PARM_DESC(rpm_range_index, "RPM range index (1 by default: 4000RPM)");
+
+static unsigned int fan_mode = 0;
+module_param(fan_mode, uint, S_IRUGO);
+MODULE_PARM_DESC(fan_mode, "Set fan mode (0 by default: PWM mode)");
+
+/* for RPM mode: only for 3048, so fix value */
+#define TACH_TO_PWM(val) (10200 / val)
+#define PWM_TO_TACH(val) TACH_TO_PWM(val)
+#define MIN_PWM (130) /* 118 to 130 is same level */
+#define DEFAULT_PWM (150)
+#define IDLE_SPEED (5000)
+
+static int fan_mode_rpm_idle = 0;
+
 /*
  * Client data (each client gets its own)
  */
@@ -80,6 +97,7 @@ struct max6639_data {
 
 	/* Register values only written to */
 	u8 pwm[2];		/* Register value: Duty cycle 0..120 */
+	u8 tach_count[2];	/* for RPM mode: register 0x22 and 0x23: target tach count */
 	u8 temp_therm[2];	/* THERM Temperature, 0..255 C (->_max) */
 	u8 temp_alert[2];	/* ALERT Temperature, 0..255 C (->_crit) */
 	u8 temp_ot[2];		/* OT Temperature, 0..255 C (->_emergency) */
@@ -138,6 +156,19 @@ static struct max6639_data *max6639_update_device(struct device *dev)
 				goto abort;
 			}
 			data->temp[i] |= res << 3;
+
+			/* for RPM mode: read the written TC in register */
+			if (fan_mode && !fan_mode_rpm_idle) {
+				res = i2c_smbus_read_byte_data(client,
+					       MAX6639_REG_TARGET_CNT
+					       (i));
+				if (res < 0) {
+					ret = ERR_PTR(res);
+					goto abort;
+				}
+				data->tach_count[i] = res;
+			}
+
 		}
 
 		data->last_updated = jiffies;
@@ -278,7 +309,12 @@ static ssize_t pwm_show(struct device *dev, struct device_attribute *dev_attr,
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
 	struct max6639_data *data = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%d\n", data->pwm[attr->index] * 255 / 120);
+	if (!fan_mode) {
+		return sprintf(buf, "%d\n", data->pwm[attr->index] * 255 / 120);
+	} else {
+		/* for RPM mode */
+		return sprintf(buf, "%d\n", TACH_TO_PWM(data->tach_count[attr->index]));
+	}
 }
 
 static ssize_t pwm_store(struct device *dev,
@@ -295,13 +331,73 @@ static ssize_t pwm_store(struct device *dev,
 	if (res)
 		return res;
 
-	val = clamp_val(val, 0, 255);
+	if (!fan_mode) {
+		val = clamp_val(val, 0, 255);
+	} else {
+		/*  150 is against 0x44 (tach count) which is the low limit value for
+		 *  target tach count registers(0x22 and 0x23)*/
+
+		/*  Specially: only n3048 use RPM mode, so we can fixed the range value
+		 *  add pwm range from 118 to 150, which is called "idle mode" in datasheet */
+		val = clamp_val(val, MIN_PWM, 255);
+	}
+
 
 	mutex_lock(&data->update_lock);
-	data->pwm[attr->index] = (u8)(val * 120 / 255);
-	i2c_smbus_write_byte_data(client,
+	if (!fan_mode) {
+		data->pwm[attr->index] = (u8)(val * 120 / 255);
+		i2c_smbus_write_byte_data(client,
 				  MAX6639_REG_TARGTDUTY(attr->index),
 				  data->pwm[attr->index]);
+	} else {
+		/* rpm mode is special */
+		if (val == MIN_PWM) {
+			/* enter idle mode */
+			if (!fan_mode_rpm_idle) {
+				fan_mode_rpm_idle = 1;
+				res = i2c_smbus_read_byte_data(client, MAX6639_REG_GCONFIG);
+				if (res < 0) {
+					mutex_unlock(&data->update_lock);
+					return res;
+				}
+				res = i2c_smbus_write_byte_data(client,
+								MAX6639_REG_GCONFIG, res | MAX6639_GCONFIG_STANDBY);
+				if (res < 0) {
+					mutex_unlock(&data->update_lock);
+					return res;
+				}
+			}
+
+		} else {
+			/* exit idle mode */
+			if (fan_mode_rpm_idle) {
+				fan_mode_rpm_idle = 0;
+				res = i2c_smbus_read_byte_data(client, MAX6639_REG_GCONFIG);
+				if (res < 0) {
+					mutex_unlock(&data->update_lock);
+					return res;
+				}
+				res = i2c_smbus_write_byte_data(client,
+								MAX6639_REG_GCONFIG, res & ~MAX6639_GCONFIG_STANDBY);
+				if (res < 0) {
+					mutex_unlock(&data->update_lock);
+					return res;
+				}
+			}
+
+			res = i2c_smbus_write_byte_data(client,
+				  MAX6639_REG_TARGET_CNT(attr->index),
+				  PWM_TO_TACH(val));
+			if (res < 0) {
+				mutex_unlock(&data->update_lock);
+				return res;
+			}
+
+		}
+
+		/* come here if all is ok */
+		data->tach_count[attr->index] = PWM_TO_TACH(val);
+	}
 	mutex_unlock(&data->update_lock);
 	return count;
 }
@@ -314,6 +410,11 @@ static ssize_t fan_input_show(struct device *dev,
 
 	if (IS_ERR(data))
 		return PTR_ERR(data);
+
+	if (fan_mode && fan_mode_rpm_idle) {
+		/* idle mode */
+		return sprintf(buf, "%d\n", IDLE_SPEED);
+	}
 
 	return sprintf(buf, "%d\n", FAN_FROM_REG(data->fan[attr->index],
 		       data->rpm_range));
@@ -404,7 +505,7 @@ static int max6639_init_client(struct i2c_client *client,
 	struct max6639_platform_data *max6639_info =
 		dev_get_platdata(&client->dev);
 	int i;
-	int rpm_range = 1; /* default: 4000 RPM */
+	int rpm_range = rpm_range_index; /* default: 4000 RPM */
 	int err;
 
 	/* Reset chip to default values, see below for GCONFIG setup */
@@ -480,13 +581,23 @@ static int max6639_init_client(struct i2c_client *client,
 		if (err)
 			goto exit;
 
-		/* PWM 120/120 (i.e. 100%) */
-		data->pwm[i] = 120;
-		err = i2c_smbus_write_byte_data(client,
-				MAX6639_REG_TARGTDUTY(i), data->pwm[i]);
-		if (err)
-			goto exit;
+		if (!fan_mode) {
+			/* PWM 120/120 (i.e. 100%) */
+			data->pwm[i] = 120;
+			err = i2c_smbus_write_byte_data(client,
+					MAX6639_REG_TARGTDUTY(i), data->pwm[i]);
+			if (err)
+				goto exit;
+		} else {
+			/* Max RPM = 12000 , set default 7000 */
+			data->tach_count[i] = PWM_TO_TACH(DEFAULT_PWM);
+			err = i2c_smbus_write_byte_data(client, MAX6639_REG_TARGET_CNT(i),
+					data->tach_count[i]);
+			if (err)
+				goto exit;
+		}
 	}
+
 	/* Start monitoring */
 	err = i2c_smbus_write_byte_data(client, MAX6639_REG_GCONFIG,
 		MAX6639_GCONFIG_DISABLE_TIMEOUT | MAX6639_GCONFIG_CH2_LOCAL |

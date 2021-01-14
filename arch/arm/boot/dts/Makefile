@@ -153,14 +153,7 @@ dtb-$(CONFIG_ARCH_BCM_MOBILE) += \
 	bcm21664-garnet.dtb \
 	bcm23550-sparrow.dtb
 dtb-$(CONFIG_ARCH_BCM_NSP) += \
-	bcm958522er.dtb \
-	bcm958525er.dtb \
-	bcm958525xmc.dtb \
-	bcm958622hr.dtb \
-	bcm958623hr.dtb \
-	bcm958625hr.dtb \
-	bcm988312hr.dtb \
-	bcm958625k.dtb
+	n3132.dtb
 dtb-$(CONFIG_ARCH_BERLIN) += \
 	berlin2-sony-nsz-gs7.dtb \
 	berlin2cd-google-chromecast.dtb \
@@ -1408,3 +1401,10 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
 	aspeed-bmc-opp-zaius.dtb \
 	aspeed-bmc-portwell-neptune.dtb \
 	aspeed-bmc-quanta-q71l.dtb
+dtb-$(CONFIG_MACH_HX4) += \
+	as4610.dtb \
+	n3048.dtb \
+	n3048_1G.dtb
+dtb-$(CONFIG_MACH_HR3) += \
+	n1124.dtb \
+	n1148.dtb

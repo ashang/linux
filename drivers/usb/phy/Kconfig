@@ -192,4 +192,28 @@ config JZ4770_PHY
 	  This driver provides PHY support for the USB controller found
 	  on the JZ-series and X-series SoCs from Ingenic.
 
+config USBPHY_XGS_IPROC
+    tristate "BRCM iProc USB PHY"
+    depends on ARCH_IPROC
+    select USB_PHY
+    help
+        BRCM iProc USB PHY driver
+
+config USB_BCM_PHY
+	tristate "Broadcom USB PHY support"
+	depends on ARCH_BCM_IPROC
+	select USB_PHY
+	help
+	  Enable this to support the Broadcom USB PHY.
+
+	  BCM Phy is used by some of the Broadcom SoCs, for example Cygnus.
+
+config IPROC_USB3_PHY
+	tristate "Broadcom IPROC USB 3.0 PHY support"
+	depends on ARCH_BCM_IPROC
+	select USB_PHY
+	help
+	  Enable this to support the Broadcom IPROC USB 3.0 PHY.
+	  This driver supports Broadcom IPROC SoCs, e.g. Northstar Plus.
+
 endmenu

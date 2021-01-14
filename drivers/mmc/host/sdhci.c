@@ -1950,7 +1950,7 @@ void sdhci_enable_clk(struct sdhci_host *host, u16 clk)
 		if (clk & SDHCI_CLOCK_INT_STABLE)
 			break;
 		if (timedout) {
-			pr_err("%s: Internal clock never stabilised.\n",
+			pr_debug("%s: Internal clock never stabilised.\n",
 			       mmc_hostname(host->mmc));
 			sdhci_dumpregs(host);
 			return;

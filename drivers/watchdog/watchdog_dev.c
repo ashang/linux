@@ -498,7 +498,7 @@ static ssize_t bootstatus_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(bootstatus);
 
-static ssize_t timeleft_show(struct device *dev, struct device_attribute *attr,
+static ssize_t time_left_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
 {
 	struct watchdog_device *wdd = dev_get_drvdata(dev);
@@ -511,10 +511,12 @@ static ssize_t timeleft_show(struct device *dev, struct device_attribute *attr,
 	mutex_unlock(&wd_data->lock);
 	if (!status)
 		status = sprintf(buf, "%u\n", val);
+	else
+		status = sprintf(buf, "%s\n", "N/A");
 
 	return status;
 }
-static DEVICE_ATTR_RO(timeleft);
+static DEVICE_ATTR_RO(time_left);
 
 static ssize_t timeout_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
@@ -523,7 +525,38 @@ static ssize_t timeout_show(struct device *dev, struct device_attribute *attr,
 
 	return sprintf(buf, "%u\n", wdd->timeout);
 }
-static DEVICE_ATTR_RO(timeout);
+
+static ssize_t timeout_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct watchdog_device *wdd = dev_get_drvdata(dev);
+	unsigned long val;
+	int ret;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+	ret = watchdog_set_timeout(wdd, val);
+	if (!ret)
+		ret = count;
+
+	watchdog_ping(wdd);
+	return ret;
+}
+static DEVICE_ATTR_RW(timeout);
+
+static ssize_t keep_alive_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct watchdog_device *wdd = dev_get_drvdata(dev);
+	int ret = count;
+
+	watchdog_ping(wdd);
+	return ret;
+}
+static DEVICE_ATTR_WO(keep_alive);
+
 
 static ssize_t pretimeout_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
@@ -543,17 +576,42 @@ static ssize_t identity_show(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR_RO(identity);
 
-static ssize_t state_show(struct device *dev, struct device_attribute *attr,
+static ssize_t wdt_enable_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
 {
 	struct watchdog_device *wdd = dev_get_drvdata(dev);
 
 	if (watchdog_active(wdd))
-		return sprintf(buf, "active\n");
+		return sprintf(buf, "1\n");
 
-	return sprintf(buf, "inactive\n");
+	return sprintf(buf, "0\n");
 }
-static DEVICE_ATTR_RO(state);
+static ssize_t wdt_enable_store(struct device *dev,
+					 struct device_attribute *attr,
+					 const char *buf, size_t count)
+{
+	struct watchdog_device *wdd = dev_get_drvdata(dev);
+	unsigned long val;
+	int ret = 0;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val == 0 && watchdog_active(wdd)) {
+		ret = watchdog_stop(wdd);
+	}
+	else if (val == 1 && !watchdog_active(wdd)) {
+		ret = watchdog_start(wdd);
+	}
+	else {
+	}
+
+	if (!ret)
+		ret = count;
+
+	return ret;
+}
+static DEVICE_ATTR_RW(wdt_enable);
 
 static ssize_t pretimeout_available_governors_show(struct device *dev,
 				   struct device_attribute *attr, char *buf)
@@ -592,7 +650,7 @@ static umode_t wdt_is_visible(struct kobject *kobj, struct attribute *attr,
 	struct watchdog_device *wdd = dev_get_drvdata(dev);
 	umode_t mode = attr->mode;
 
-	if (attr == &dev_attr_timeleft.attr && !wdd->ops->get_timeleft)
+	if (attr == &dev_attr_time_left.attr && !wdd->ops->get_timeleft)
 		mode = 0;
 	else if (attr == &dev_attr_pretimeout.attr &&
 		 !(wdd->info->options & WDIOF_PRETIMEOUT))
@@ -606,11 +664,12 @@ static umode_t wdt_is_visible(struct kobject *kobj, struct attribute *attr,
 	return mode;
 }
 static struct attribute *wdt_attrs[] = {
-	&dev_attr_state.attr,
+	&dev_attr_wdt_enable.attr,
 	&dev_attr_identity.attr,
 	&dev_attr_timeout.attr,
+	&dev_attr_keep_alive.attr,
 	&dev_attr_pretimeout.attr,
-	&dev_attr_timeleft.attr,
+	&dev_attr_time_left.attr,
 	&dev_attr_bootstatus.attr,
 	&dev_attr_status.attr,
 	&dev_attr_nowayout.attr,
@@ -961,7 +1020,7 @@ static const struct file_operations watchdog_fops = {
 static struct miscdevice watchdog_miscdev = {
 	.minor		= WATCHDOG_MINOR,
 	.name		= "watchdog",
-	.fops		= &watchdog_fops,
+	.fops		= NULL, /*&watchdog_fops,*/ /* disable /dev/watchdog* */
 };
 
 static struct class watchdog_class = {

@@ -641,9 +641,18 @@ pinctrl_bind_failed:
 			 drv->name, dev_name(dev), ret);
 		break;
 	default:
-		/* driver matched but the probe failed */
-		pr_warn("%s: probe of %s failed with error %d\n",
-			drv->name, dev_name(dev), ret);
+		/* PICOS
+		 * **only** skip intel nic probe failure
+		 */
+		if (strcmp(drv->name, "igb") &&
+		    strcmp(drv->name, "ixgb") &&
+		    strcmp(drv->name, "ixgbe") &&
+		    strcmp(drv->name, "e1000") &&
+		    strcmp(drv->name, "e1000e")) {
+			/* driver matched but the probe failed */
+			pr_warn("%s: probe of %s failed with error %d\n",
+			       drv->name, dev_name(dev), ret);
+		}
 	}
 	/*
 	 * Ignore errors returned by ->probe so that the next driver can try

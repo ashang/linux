@@ -387,6 +387,9 @@ struct spi_nor {
 	} dirmap;
 
 	void *priv;
+#if defined(CONFIG_MTD_SPI_NOR) || defined(CONFIG_MTD_SPI_NOR_IPROC)
+	const void *priv1;
+#endif
 };
 
 static inline void spi_nor_set_flash_node(struct spi_nor *nor,

@@ -88,6 +88,22 @@ ENTRY(stext)
 	@ ensure svc mode and all interrupts masked
 	safe_svcmode_maskall r9
 
+#ifdef CONFIG_ARCH_IPROC
+#ifndef CONFIG_MACH_IPROC_P7
+#if     !defined(CONFIG_MACH_CYGNUS) && !defined(CONFIG_MACH_NSP)
+	/*
+	 * fixup the vector table so that the secondary CPU does
+	 * not start executing kernel instructions until we've
+	 * patched its jump address during wakeup_secondary()
+	 */
+	ldr	r3,=0xffff002c
+	ldr	r4,=0xffff0000
+	str	r3, [r4, #0x400]
+#endif
+#endif
+
+#endif /* CONFIG_ARCH_IPROC */
+
 	mrc	p15, 0, r9, c0, c0		@ get processor id
 	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid
 	movs	r10, r5				@ invalid processor (r5=0)?

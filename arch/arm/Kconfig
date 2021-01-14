@@ -537,6 +537,36 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
+config ARCH_IPROC
+	bool "Broadcom ARMv7 iProc boards"
+	depends on MMU
+	select CPU_V7
+	select HAVE_CLK
+	select COMMON_CLK
+	select HAVE_SMP
+	select HAVE_ARM_TWD if SMP
+	select ARM_GLOBAL_TIMER
+	select HAVE_MACH_CLKDEV
+	select COMMON_CLKDEV
+	select CLKDEV_LOOKUP
+	select ARM_GIC
+	select HAVE_ARM_SCU
+	select GENERIC_CLOCKEVENTS_BUILD
+	select GENERIC_CLOCKEVENTS
+	select PCI
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select CACHE_L2X0
+	select ARM_AMBA
+	select ARCH_HAS_CPUFREQ
+	select ARCH_SUPPORTS_BIG_ENDIAN
+	select CPU_ENDIAN_BE8 if CPU_BIG_ENDIAN
+	select ARM_ERRATA_754322
+	select ARM_ERRATA_764369 if SMP
+	select ARM_ERRATA_775420
+	help
+	  This is a common family of Broadcom Cortex A9 based boards
+
 endchoice
 
 menu "Multiple platform selection"
@@ -653,6 +683,12 @@ source "arch/arm/mach-imx/Kconfig"
 source "arch/arm/mach-integrator/Kconfig"
 
 source "arch/arm/mach-iop32x/Kconfig"
+
+source "arch/arm/mach-iop33x/Kconfig"
+
+source "arch/arm/mach-iop13xx/Kconfig"
+
+source "arch/arm/mach-iproc/Kconfig"
 
 source "arch/arm/mach-ixp4xx/Kconfig"
 

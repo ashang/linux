@@ -284,5 +284,12 @@ config NVMEM_REBOOT_MODE
 	  then the bootloader can read it and take different
 	  action according to the mode.
 
+config POWER_RESET_IPROC
+	bool "Broadcom iProc power-off driver"
+	depends on ARCH_BCM_IPROC || ARCH_NORTHSTAR2
+	depends on POWER_RESET
+	help
+	  This driver adds support for rebooting iProc SoCs.
+
 endif
 

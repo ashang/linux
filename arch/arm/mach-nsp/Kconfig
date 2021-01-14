@@ -1,0 +1,115 @@
+config ARCH_BCM
+	bool "Broadcom SoC Support"
+	depends on ARCH_MULTIPLATFORM
+	help
+	  This enables support for Broadcom ARM based SoC
+          chips
+
+if ARCH_BCM
+
+menu "Broadcom SoC Selection"
+
+comment "IPROC architected SoCs"
+
+config ARCH_BCM_IPROC
+	bool
+	select ARM_GIC
+	select CACHE_L2X0
+	select HAVE_ARM_SCU if SMP
+	select HAVE_ARM_TWD if SMP
+	select ARM_GLOBAL_TIMER
+	select ARM_CPU_SUSPEND if PM
+	select GENERIC_CLOCKEVENTS
+	select MIGHT_HAVE_PCI
+	select VIRT_TO_BUS
+
+	select CLKSRC_MMIO
+	select ARCH_REQUIRE_GPIOLIB
+	select ARM_AMBA
+	select PINCTRL
+	select DMADEVICES
+	select PL330_DMA
+	select PCI_DOMAINS if PCI
+	select ARCH_SUPPORTS_MSI if PCI
+	select PCI_MSI if ARCH_SUPPORTS_MSI
+	select USB_ARCH_HAS_EHCI if USB_SUPPORT
+	select USB_ARCH_HAS_OHCI if USB_SUPPORT
+	select ARCH_SUPPORTS_BIG_ENDIAN
+	help
+	  This enables support for systems based on Broadcom IPROC architected SoCs.
+	  The IPROC complex contains one or more ARM CPUs along with common
+	  core periperals. Application specific SoCs are created by adding a
+	  uArchitecture containing peripherals outside of the IPROC complex.
+	  Currently supported SoCs are Cygnus and Northstar Plus.
+
+
+config ARCH_BCM_NSP
+	bool "Broadcom Northstar Plus Soc Support"
+	depends on ARCH_MULTI_V7
+	select ARCH_BCM_IPROC
+	select ARM_ERRATA_754322
+	select ARM_ERRATA_764369 if SMP select ARM_ERRATA_775420
+	select HAVE_ARM_SCU if SMP
+	select HAVE_SMP
+	select THERMAL
+	select THERMAL_OF
+	help
+	  Enable Support for Broadcom Northstar Plus SoC
+	  which includes the following variants:
+	  BCM53022, BCM58622, BCM58523, BCM58623, BCM58525,
+	  BCM58535, BCM58625, BCM58312, BCM58625
+
+config MACH_IPROC_NSP_B0_CC
+	bool "Config for cache coherent AXI master operation"
+	depends on (ARCH_BCM_NSP)
+	default n
+	help
+	  Add code to enable cache coherent operating mode for
+	  the AXI masters for NorthStar+ chips rev B0 or later.
+	  Does not automatically disable the usual cache flush
+	  and invalidate behaviour, but it does set up certain
+	  configuration registers on AXI masters appropriately.
+	  If run on an earlier revision, it will do nothing.
+
+	  Note: NS+ devices are either fully coherent or not;
+	  if this is set, all hardware runs in coherent mode,
+	  if not, only the GMAC can run coherently.
+
+config IPROC_64K_PAGE
+	bool "64K page support"
+	depends on ARCH_BCM_NSP
+	default n
+	help
+	  Support for 64k page sizes.  This option may improve performance
+	  depending on application and memory utilization.  This option was
+	  added for optimization purposes.
+
+config MACH_IPROC_NSP_B0_BOOT_SIGNED
+	bool "Configure Kernel For Trusted/Signed Boot Support"
+	depends on ARCH_BCM_NSP
+	default n
+	help
+	  Add support for the Linux Kernel to operate post
+	  authenticated, signed, multi-stage boot.
+	  Typically SBL->SBI(signed)->SSB(signed)->uBoot(signed)->Kernel.
+
+config BCM_CUSTOM_RECVFILE
+	bool "Custom Recvfile 'splice zero copy write' optimization"
+	depends on INET
+	default n
+	help
+	  Enable Broadcom Custom Recvfile 'splice zero copy write' optimization
+	  If unsure, say N.
+
+config BCM_GRO_ENABLE
+	bool "Broadcom GRO Enable"
+	depends on ARCH_BCM_NSP
+	depends on ET_NAPI_POLL || ET_NAPI2_POLL
+	default n
+	help
+	  Enable Broadcom Generic Receive Offload
+	  If unsure, say N.
+
+endmenu
+
+endif

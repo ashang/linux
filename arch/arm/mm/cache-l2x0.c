@@ -798,7 +798,7 @@ static int __init __l2c_init(const struct l2c_init_data *data,
 	 * set.
 	 */
 	if (aux_val & aux_mask)
-		pr_alert("L2C: platform provided aux values permit register corruption.\n");
+		pr_info("L2C: platform provided aux values permit register corruption.\n");
 
 	old_aux = aux = readl_relaxed(l2x0_base + L2X0_AUX_CTRL);
 	aux &= aux_mask;
@@ -1032,6 +1032,13 @@ static void __init l2x0_of_parse(const struct device_node *np,
 	u32 val = 0, mask = 0;
 	u32 assoc;
 	int ret;
+
+#ifdef CONFIG_ARCH_IPROC
+	if (of_property_read_u32(np, "arm,aux-value", aux_val))
+		printk("L2 aux-value proterty missing\n");
+	if (of_property_read_u32(np, "arm,aux-mask", aux_mask))
+		printk("L2 aux-mask proterty missing\n");
+#endif
 
 	of_property_read_u32(np, "arm,tag-latency", &tag);
 	if (tag) {
@@ -1791,7 +1798,7 @@ int __init l2x0_of_init(u32 aux_val, u32 aux_mask)
 		pr_warn("L2C: platform modifies aux control register: 0x%08x -> 0x%08x\n",
 		        old_aux, (old_aux & aux_mask) | aux_val);
 	} else if (aux_mask != ~0U && aux_val != 0) {
-		pr_alert("L2C: platform provided aux values match the hardware, so have no effect.  Please remove them.\n");
+		pr_info("L2C: platform provided aux values match the hardware, so have no effect.  Please remove them.\n");
 	}
 
 	/* All L2 caches are unified, so this property should be specified */

@@ -46,6 +46,8 @@ struct iproc_pcie_ob_map;
 struct iproc_pcie_ib_map;
 struct iproc_msi;
 
+#define IPROC_PCIE_MAX_NUM_IRQS 6
+
 /**
  * iProc PCIe device
  *
@@ -86,6 +88,7 @@ struct iproc_pcie {
 	struct resource mem;
 	struct phy *phy;
 	int (*map_irq)(const struct pci_dev *, u8, u8);
+	int irqs[IPROC_PCIE_MAX_NUM_IRQS];
 	bool ep_is_internal;
 	bool iproc_cfg_read;
 	bool rej_unconfig_pf;

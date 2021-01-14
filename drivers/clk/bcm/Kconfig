@@ -100,3 +100,11 @@ config CLK_RASPBERRYPI
 	help
 	  Enable common clock framework support for Raspberry Pi's firmware
 	  dependent clocks
+
+config COMMON_CLK_XGS_IPROC
+	bool "BRCM XGS iProc clock support"
+	depends on COMMON_CLK && ARCH_IPROC
+	default ARCH_IPROC
+	help
+	  Enable common clock framework support for Broadcom SoCs
+	  based on the iProc architecture

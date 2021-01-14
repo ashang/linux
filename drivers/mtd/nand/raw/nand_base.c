@@ -3163,6 +3163,11 @@ static int nand_do_read_ops(struct nand_chip *chip, loff_t from,
 						 __func__, buf);
 
 read_retry:
+#ifdef CONFIG_ARCH_BCM_NSP
+			ret = nand_read_page_op(chip, page, 0, NULL, 0);
+			if (ret)
+				break;
+#endif
 			/*
 			 * Now read the page into the buffer.  Absent an error,
 			 * the read methods return max bitflips per ecc step.
@@ -3928,6 +3933,12 @@ static int nand_write_page(struct nand_chip *chip, uint32_t offset,
 	else
 		subpage = 0;
 
+#ifdef CONFIG_ARCH_BCM_NSP
+	status = nand_prog_page_begin_op(chip, page, 0, NULL, 0);
+	if (status)
+		return status;
+#endif
+
 	if (unlikely(raw))
 		status = chip->ecc.write_page_raw(chip, buf, oob_required,
 						  page);
@@ -3940,7 +3951,12 @@ static int nand_write_page(struct nand_chip *chip, uint32_t offset,
 	if (status < 0)
 		return status;
 
+#ifdef CONFIG_ARCH_BCM_NSP
+	return nand_prog_page_end_op(chip);
+#endif
+
 	return 0;
+
 }
 
 #define NOTALIGNED(x)	((x & (chip->subpagesize - 1)) != 0)
@@ -3972,12 +3988,14 @@ static int nand_do_write_ops(struct nand_chip *chip, loff_t to,
 	if (!writelen)
 		return 0;
 
+#if 0
 	/* Reject writes, which are not page aligned */
 	if (NOTALIGNED(to) || NOTALIGNED(ops->len)) {
 		pr_notice("%s: attempt to write non page aligned data\n",
 			   __func__);
 		return -EINVAL;
 	}
+#endif
 
 	column = to & (mtd->writesize - 1);
 
@@ -5852,8 +5870,17 @@ static int nand_scan_tail(struct nand_chip *chip)
 	if (!mtd->bitflip_threshold)
 		mtd->bitflip_threshold = DIV_ROUND_UP(mtd->ecc_strength * 3, 4);
 
+#if 1
 	/* Find the fastest data interface for this chip */
 	ret = nand_choose_interface_config(chip);
+#else
+	if (!mtd->bitflip_retirelimit)
+		mtd->bitflip_retirelimit
+			= (mtd->bitflip_threshold + mtd->ecc_strength + 1) / 2;
+
+	/* Initialize the ->data_interface field. */
+	ret = nand_init_data_interface(chip);
+#endif
 	if (ret)
 		goto err_nanddev_cleanup;
 

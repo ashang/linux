@@ -66,6 +66,7 @@
 #include <linux/i2c.h>
 #include <linux/acpi.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 
 #include <linux/io-64-nonatomic-lo-hi.h>
 
@@ -190,9 +191,12 @@ static const struct pci_device_id ismt_ids[] = {
 MODULE_DEVICE_TABLE(pci, ismt_ids);
 
 /* Bus speed control bits for slow debuggers - refer to the docs for usage */
-static unsigned int bus_speed;
+static unsigned int bus_speed = 100;
+static unsigned int delay = 1000;
 module_param(bus_speed, uint, S_IRUGO);
-MODULE_PARM_DESC(bus_speed, "Bus Speed in kHz (0 = BIOS default)");
+MODULE_PARM_DESC(bus_speed, "Bus Speed in kHz (100 by default)");
+module_param(delay, uint, S_IRUGO);
+MODULE_PARM_DESC(delay, "Delay in microsecs before access (1000 by default)");
 
 /**
  * __ismt_desc_dump() - dump the contents of a specific descriptor
@@ -400,6 +404,8 @@ static int ismt_access(struct i2c_adapter *adap, u16 addr,
 	struct device *dev = &priv->pci_dev->dev;
 	u8 *dma_buffer = PTR_ALIGN(&priv->buffer[0], 16);
 
+	if (delay > 0)
+		usleep_range(delay, delay);
 	desc = &priv->hw[priv->head];
 
 	/* Initialize the DMA buffer */
@@ -759,7 +765,7 @@ static void ismt_hw_init(struct ismt_priv *priv)
 		bus_speed = 1000;
 		break;
 	}
-	dev_dbg(dev, "SMBus clock is running at %d kHz\n", bus_speed);
+	dev_info(dev, "SMBus clock is running at %d kHz with delay %d us\n", bus_speed, delay);
 }
 
 /**

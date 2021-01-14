@@ -138,6 +138,15 @@ config PCI_VERSATILE
 	bool "ARM Versatile PB PCI controller"
 	depends on ARCH_VERSATILE || COMPILE_TEST
 
+config PCIE_XGS_IPROC
+	tristate "Broadcom XGS iProc PCIe controller"
+	select PCI_DOMAINS
+	depends on ARCH_IPROC
+	default n
+	 help
+	   This enables the XGS iProc PCIe core controller support for Broadcom's
+	   iProc family of SoCs
+
 config PCIE_IPROC
 	tristate
 	help
@@ -147,7 +156,7 @@ config PCIE_IPROC
 
 config PCIE_IPROC_PLATFORM
 	tristate "Broadcom iProc PCIe platform bus driver"
-	depends on ARCH_BCM_IPROC || (ARM && COMPILE_TEST)
+	depends on ARCH_BCM_IPROC || ARCH_IPROC || (ARM && COMPILE_TEST)
 	depends on OF
 	select PCIE_IPROC
 	default ARCH_BCM_IPROC

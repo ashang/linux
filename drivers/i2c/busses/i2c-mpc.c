@@ -107,17 +107,29 @@ static irqreturn_t mpc_i2c_isr(int irq, void *dev_id)
 static void mpc_i2c_fixup(struct mpc_i2c *i2c)
 {
 	int k;
+#ifdef CONFIG_PPC_85xx
+	u32 delay_val = 65536 / (fsl_get_sys_freq() / 2000000);     /* 64K cycle */
+#else
 	u32 delay_val = 1000000 / i2c->real_clk + 1;
+#endif
+
 
 	if (delay_val < 2)
 		delay_val = 2;
 
 	for (k = 9; k; k--) {
 		writeccr(i2c, 0);
+#ifdef CONFIG_PPC_85xx
+		udelay(delay_val);
+#endif
 		writeccr(i2c, CCR_MSTA | CCR_MTX | CCR_MEN);
 		readb(i2c->base + MPC_I2C_DR);
 		writeccr(i2c, CCR_MEN);
+#ifdef CONFIG_PPC_85xx
+		udelay(delay_val);
+#else
 		udelay(delay_val << 1);
+#endif
 	}
 }
 
@@ -569,6 +581,21 @@ static int mpc_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 	int ret = 0;
 	unsigned long orig_jiffies = jiffies;
 	struct mpc_i2c *i2c = i2c_get_adapdata(adap);
+
+#ifdef CONFIG_PPC_85xx
+	int status;
+	int timeout = 5;
+	status = readb(i2c->base + MPC_I2C_SR);
+	while (timeout-- && (status & CSR_MBB)) {
+		writeccr(i2c, CCR_MSTA);
+		readb(i2c->base + MPC_I2C_DR);
+		writeccr(i2c, 0);
+		udelay(100);
+		writeccr(i2c, CCR_MEN);
+		udelay(1000);
+		status = readb(i2c->base + MPC_I2C_SR);
+	}
+#endif
 
 	mpc_i2c_start(i2c);
 

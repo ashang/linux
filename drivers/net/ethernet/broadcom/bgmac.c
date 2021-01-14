@@ -1497,7 +1497,7 @@ int bgmac_enet_probe(struct bgmac *bgmac)
 	dev_set_drvdata(bgmac->dev, bgmac);
 
 	if (!is_valid_ether_addr(net_dev->dev_addr)) {
-		dev_err(bgmac->dev, "Invalid MAC addr: %pM\n",
+		dev_info(bgmac->dev, "Invalid MAC addr: %pM\n",
 			net_dev->dev_addr);
 		eth_hw_addr_random(net_dev);
 		dev_warn(bgmac->dev, "Using random MAC: %pM\n",

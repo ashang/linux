@@ -44,6 +44,10 @@
 
 #define BCM_USB_FIFO_THRESHOLD	0x00800040
 #define bcm_iproc_insnreg01	hostpc[0]
+#ifdef CONFIG_USB_EHCI_XGS_IPROC
+#include <linux/usb/phy.h>
+#include <linux/usb/iproc_usb.h>
+#endif /* CONFIG_USB_EHCI_XGS_IPROC */
 
 struct ehci_platform_priv {
 	struct clk *clks[EHCI_MAX_CLKS];
@@ -244,9 +248,26 @@ static int ehci_platform_probe(struct platform_device *dev)
 	struct ehci_platform_priv *priv;
 	struct ehci_hcd *ehci;
 	int err, irq, clk = 0;
+#ifdef CONFIG_USB_EHCI_XGS_IPROC
+	struct usb_phy *phy;
+	int ret;
+#endif /* CONFIG_USB_EHCI_XGS_IPROC */
+
 
 	if (usb_disabled())
 		return -ENODEV;
+
+#ifdef CONFIG_USB_EHCI_XGS_IPROC
+	phy = devm_usb_get_phy_by_phandle(&dev->dev, "usb-phy", 0);
+	if (IS_ERR(phy)) {
+		ret = PTR_ERR(phy);
+		dev_err(&dev->dev, "unable to find transceiver, error %d\n", ret);
+		return -EPROBE_DEFER;
+	}
+	if (phy->flags != IPROC_USB_MODE_HOST) {
+		return -ENODEV;
+	}
+#endif
 
 	/*
 	 * Use reasonable defaults so platforms don't have to provide these
@@ -366,6 +387,9 @@ static int ehci_platform_probe(struct platform_device *dev)
 
 	device_wakeup_enable(hcd->self.controller);
 	device_enable_async_suspend(hcd->self.controller);
+#ifdef CONFIG_USB_EHCI_XGS_IPROC
+	ehci_writel(ehci, BCM_USB_FIFO_THRESHOLD, &ehci->regs->reserved4[6]);
+#endif
 	platform_set_drvdata(dev, hcd);
 
 	if (priv->quirk_poll)

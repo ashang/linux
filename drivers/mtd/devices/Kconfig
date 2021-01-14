@@ -79,6 +79,13 @@ config MTD_DATAFLASH_OTP
 	  other key product data.  The second half is programmed with a
 	  unique-to-each-chip bit pattern at the factory.
 
+config MTD_M25P80_IPROC
+	tristate "M25P80 modified for BRCM iProc"
+	depends on SPI_MASTER  && MTD_SPI_NOR_IPROC
+	select SPI_MEM
+	help
+	  This enables access to most modern SPI flash chips for BRCM iProc QSPI controller
+
 config MTD_MCHP23K256
 	tristate "Microchip 23K256 SRAM"
 	depends on SPI_MASTER

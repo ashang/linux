@@ -1,0 +1,155 @@
+/*
+ *  BSD LICENSE
+ *
+ *  Copyright(c) 2016 Broadcom.  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *    * Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in
+ *      the documentation and/or other materials provided with the
+ *      distribution.
+ *    * Neither the name of Broadcom Corporation nor the names of its
+ *      contributors may be used to endorse or promote products derived
+ *      from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/dts-v1/;
+
+#include "bcm-nsp.dtsi"
+#include "bcm-iproc-coherent.dtsi"
+#include "bcm-nsp-b0-idm.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "NorthStar Plus+ (N3132)";
+	compatible = "brcm,bcm58625", "brcm,nsp";
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart2;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x60000000 0x80000000>;
+	};
+
+	smp_lut_offset {
+		compatible = "brcm,smp_lut_offset";
+		lut-offset = <0xfec>;
+	};
+
+};
+
+&i2c0 {
+    status = "okay";
+    rtc@68 {
+        compatible = "stm,m41t80", "m41st85";
+        reg = <0x68>;
+    };
+};
+
+//&amac0 {
+//	status = "okay";
+//};
+
+&amac1 {
+	status = "okay";
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&nand {
+
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+    partition@0 {
+        /* uboot - 4MB */
+        reg = <0x00000000 0x00400000>;
+        label = "uboot";
+        /*read-only;*/
+    };
+    partition@1 {
+        /* uboot-env - 4MB */
+        reg = <0x00400000 0x00400000>;
+        label = "uboot-env";
+        env_size = <0x00002000>;
+    };
+    partition@2 {
+        /* shmoo - 2MB */
+        reg = <0x00800000 0x00200000>;
+        label = "shmoo";
+    };
+    partition@3 {
+        /* sys_eeprom - 4MB */
+        reg = <0x00a00000 0x00400000>;
+        label = "sys_eeprom";
+    };
+    partition@4 {
+        /* diags - 32MB */
+        reg = <0x00e00000 0x02000000>;
+        label = "diags";
+    };
+    partition@5 {
+        /* onie - 32MB */
+        reg = <0x02e00000 0x02000000>;
+        label = "onie";
+    };
+    partition@6 {
+        /* open - 448MB */
+        reg = <0x04e00000 0xFB200000>;
+        label = "open";
+    };
+};
+
+&ohci0 {
+	status = "okay";
+};
+
+&pcie0 {
+	status = "okay";
+};
+
+&sata_phy0 {
+	status = "okay";
+};
+
+&sata_phy1 {
+	status = "okay";
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&xhci {
+	status = "okay";
+};

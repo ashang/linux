@@ -1,0 +1,252 @@
+/*
+ * Copyright 2015 Broadcom Corporation.  All rights reserved.
+ *
+ * Unless you and Broadcom execute a separate written software license
+ * agreement governing use of this software, this software is licensed to you
+ * under the terms of the GNU General Public License as
+ * published by the Free Software Foundation version 2.
+ *
+ * This program is distributed "as is" WITHOUT ANY WARRANTY of any
+ * kind, whether express or implied; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	idm {
+		compatible = "brcm,iproc-idm-monitor";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 *  For each slave IDM wrapper to be monitored,
+		 *  must include certain information.  The general
+		 *  form is this:
+		 *
+		 *  slave_name {
+		 *    reg = <_base_addr_ _length_>;
+		 *    interrupts = <GIC_SPI _irq_ IRQ_TYPE_LEVEL_HIGH>;
+		 *    error_irq;
+		 *    error_reset;
+		 *    timeout_irq;
+		 *    timeout_reset;
+		 *    timeout_exp = <_exponent_>;
+		 *  };
+		 *
+		 *  Where:
+		 *    _base_addr_ is appropriate width base address
+		 *    _length_ is 0x200
+		 *    _irq_ is the IRQ number on the GIC (global # - 32 on NS+)
+		 *    _exponent_ is the timeout exponent
+		 *
+		 *  Do not include timeout_irq if you do not want an
+		 *  interrupt for the slave timing out.
+		 *
+		 *  Do not inlcude timeout_reset if you do not want
+		 *  the slae to be reset on timeout.
+		 *
+		 *  Do not include error_irq if you do not want an
+		 *  interrupt for other slave errors.
+		 *
+		 *  Do not include error_reset if you do not want
+		 *  the slave to be reset on other slae errors.
+		 *
+		 *  The timeout is expressed as an exponent, specifically
+		 *  2^_exponent_ AXI bus cycles.  If the slave does not
+		 *  respond to an access within that many AXI cycles, the
+		 *  slave is considered to have timed out.  If you do not
+		 *  set a timeout, it is assumed to be 2^31 cycles; with
+		 *  500MHz AXI clock, this is just over 4s, which should
+		 *  be far more than any device needs to respond.
+		 */
+
+		ihost_s1 {
+			reg = <0x18107900 0x00000200>;
+			interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		ihost_s0 {
+			reg = <0x18108900 0x00000200>;
+			interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		ddr_s1 {
+			reg = <0x18109900 0x00000200>;
+			interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		ddr_s2 {
+			reg = <0x1810A900 0x00000200>;
+			interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		pcie_s0 {
+			reg = <0x1810B900 0x00000200>;
+			interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		pcie_s1 {
+			reg = <0x1810C900 0x00000200>;
+			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		pcie_s2 {
+			reg = <0x1810D900 0x00000200>;
+			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		rom {
+			reg = <0x1811A900 0x00000200>;
+			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		nand {
+			reg = <0x1811B900 0x00000200>;
+			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		qspi {
+			reg = <0x1811C900 0x00000200>;
+			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		a9jtag {
+			reg = <0x1811D900 0x00000200>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apbx {
+			reg = <0x18132900 0x00000200>;
+			interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		axiic_ds_0 {
+			reg = <0x18141900 0x00000200>;
+			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		axiic_ds_1 {
+			reg = <0x18142900 0x00000200>;
+			interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		axiic_ds_3 {
+			reg = <0x18123900 0x00000200>;
+			interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		axiic_ds_4 {
+			reg = <0x18124900 0x00000200>;
+			interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		sram {
+			reg = <0x18120900 0x00000200>;
+			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apbw {
+			reg = <0x18131900 0x00000200>;
+			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apby {
+			reg = <0x1810F900 0x00000200>;
+			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apbz {
+			reg = <0x18121900 0x00000200>;
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apbv {
+			reg = <0x18122900 0x00000200>;
+			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		apbr {
+			reg = <0x18133900 0x00000200>;
+			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+		pae_s0 {
+			reg = <0x18125900 0x00000200>;
+			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
+			error_irq;
+			timeout_irq;
+			timeout_exp = <31>;
+		};
+
+	};
+};

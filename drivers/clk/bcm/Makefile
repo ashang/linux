@@ -10,6 +10,7 @@ obj-$(CONFIG_CLK_BCM2711_DVP)	+= clk-bcm2711-dvp.o
 obj-$(CONFIG_CLK_BCM2835)	+= clk-bcm2835.o
 obj-$(CONFIG_CLK_BCM2835)	+= clk-bcm2835-aux.o
 obj-$(CONFIG_CLK_RASPBERRYPI)	+= clk-raspberrypi.o
+obj-$(CONFIG_COMMON_CLK_XGS_IPROC) += clk-xgs-iproc-armpll.o clk-xgs-iproc-pll.o clk-xgs-iproc-genpll.o
 obj-$(CONFIG_ARCH_BCM_53573)	+= clk-bcm53573-ilp.o
 obj-$(CONFIG_CLK_BCM_CYGNUS)	+= clk-cygnus.o
 obj-$(CONFIG_CLK_BCM_HR2)	+= clk-hr2.o

@@ -185,6 +185,7 @@ config GPIO_BCM_KONA
 	  Turn on GPIO support for Broadcom "Kona" chips.
 
 config GPIO_BCM_XGS_IPROC
+        # or GPIO_XGS_IPROC?
 	tristate "BRCM XGS iProc GPIO support"
 	depends on OF_GPIO && (ARCH_BCM_IPROC || COMPILE_TEST)
 	select GPIO_GENERIC
