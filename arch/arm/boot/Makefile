@@ -86,6 +86,12 @@ if [ $(words $(UIMAGE_LOADADDR)) -ne 1 ]; then \
 	false; \
 fi
 
+$(obj)/uImage-piggy:	UIMAGE_COMPRESSION = gzip
+$(obj)/uImage-piggy:	$(obj)/compressed/piggy.gzip FORCE
+	@$(check_for_multiple_loadaddr)
+	$(call if_changed,uimage)
+	@$(kecho) '  Image $@ is ready'
+
 $(obj)/uImage:	$(obj)/zImage FORCE
 	@$(check_for_multiple_loadaddr)
 	$(call if_changed,uimage)

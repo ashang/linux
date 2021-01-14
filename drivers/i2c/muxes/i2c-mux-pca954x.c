@@ -357,9 +357,14 @@ static int pca954x_probe(struct i2c_client *client,
 	struct i2c_mux_core *muxc;
 	struct pca954x *data;
 	int ret;
+	int deselect_on_exit = 0;
 
 	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
 		return -ENODEV;
+
+#ifdef CONFIG_I2C_MUX_PCA954X_DESELECT_ON_EXIT
+	deselect_on_exit = 1;
+#endif
 
 	muxc = i2c_mux_alloc(adap, dev, PCA954X_MAX_NCHANS, sizeof(*data), 0,
 			     pca954x_select_chan, pca954x_deselect_mux);
@@ -436,7 +441,7 @@ static int pca954x_probe(struct i2c_client *client,
 				break;
 			idle_disconnect_pd = pdata->modes[num].deselect_on_exit;
 		}
-		data->deselect |= (idle_disconnect_pd ||
+		data->deselect |= (idle_disconnect_pd || deselect_on_exit ||
 				   idle_disconnect_dt) << num;
 
 		ret = i2c_mux_add_adapter(muxc, force, num, class);

@@ -1,0 +1,220 @@
+/*
+ * Copyright 2015 Broadcom Corporation.  All rights reserved.
+ *
+ * Unless you and Broadcom execute a separate written software license
+ * agreement governing use of this software, this software is licensed to you
+ * under the terms of the GNU General Public License as
+ * published by the Free Software Foundation version 2.
+ *
+ * This program is distributed "as is" WITHOUT ANY WARRANTY of any
+ * kind, whether express or implied; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/{
+	coherent@0x18018000 {
+		compatible = "brcm,iproc-coherency";
+		reg = <0x18018000 0x100>,
+		      <0x18000000 0x4>,
+		      <0x1a000000 0x1000>,
+		      <0x19020000 0x1000>,
+		      <0x19022000 0x1000>;
+		interrupts = <GIC_SPI 182 IRQ_TYPE_NONE>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		sdio-r {
+			reg = <0x18100408 0x04>;
+			val-length = <2>;
+			coherency-val = <0x10 0x0f 0x03 /* ar_user */
+					 0x0a 0x1f 0x0b>; /* ar_cache */
+		};
+
+		dmac-aru {
+			reg = <0x18100408 0x04>;
+			val-length = <1>;
+			coherency-val = <0x15 0x1f 0x03>; /* ar_user */
+		};
+
+		dram-s1 {
+			reg = <0x18109408 0x04>;
+			val-length = <1>;
+			coherency-val = <0x1d 0x07 0x03>; /* axi_s1 */
+		};
+
+		dram-s2 {
+			reg = <0x1810a408 0x04>;
+			val-length = <1>;
+			coherency-val = <0x1a 0x3f 0x1f>; /* axi_s2 */
+		};
+
+		pci0-rc {
+			reg = <0x18012100 0x100>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03 /* ar_user */
+					 0x09 0x1f 0x03>; /* aw_user */
+		};
+
+		pci0-ep {
+			reg = <0x18012104 0x100>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03 /* ar_user */
+					 0x09 0x1f 0x03>; /* aw_user */
+		};
+
+		pci1-rc {
+			reg = <0x18013100 0x04>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03 /* ar_user */
+					 0x09 0x1f 0x03>; /* aw_user */
+		};
+
+		pci1-ep {
+			reg = <0x18013104 0x04>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03 /* ar_user */
+					 0x09 0x1f 0x03>; /* aw_user */
+		};
+
+		pci2-rc {
+			reg = <0x18014100 0x04>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03  /* ar_user */
+					 0x09 0x1f 0x03>;  /* aw_user */
+		};
+
+		pci2-ep {
+			reg = <0x18014104 0x04>;
+			val-length = <4>;
+			coherency-val = <0x05 0x0f 0x0b /* ar_cache */
+					 0x0e 0x0f 0x07 /* aw_cache */
+					 0x00 0x1f 0x03  /* ar_user */
+					 0x09 0x1f 0x03>;  /* aw_user */
+		};
+
+		i2s {
+			reg = <0x18118408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x14 0x0f 0x07 /* aw_cache */
+					 0x07 0x1f 0x03 /* ar_user */
+					 0x18 0x1f 0x03>; /* aw_user */
+		};
+
+		jtag {
+			reg = <0x18119408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x02 0x0f 0x07 /* aw_cache */
+					 0x14 0x1f 0x03 /* ar_user */
+					 0x06 0x1f 0x03>; /* aw_user */
+		};
+
+		apbw {
+			reg = <0x18131408 0x04>;
+			val-length = <2>;
+			coherency-val = <0x18 0x0f 0x0b /* ar_cache */
+					 0x14 0x0f 0x07>; /* aw_cache */
+		};
+
+		sdio-w {
+			reg = <0x18117408 0x04>;
+			val-length = <2>;
+			coherency-val = <0x17 0x0f 0x07 /* aw_cache */
+					 0x1b 0x1f 0x03>; /* aw_user */
+		};
+
+		amac0_idm0 {
+			reg = <0x18110408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x07 0x0f 0x07 /* aw_cache */
+					 0x19 0x1f 0x03 /* ar_user */
+					 0x14 0x1f 0x03>; /* aw_user */
+		};
+
+		amac_idm1 {
+			reg = <0x18111408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x07 0x0f 0x07 /* aw_cache */
+					 0x19 0x1f 0x03 /* ar_user */
+					 0x14 0x1f 0x03>; /* aw_user */
+		};
+
+		fa_amac_idm0 {
+			reg = <0x18112408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x07 0x0f 0x07 /* aw_cache */
+					 0x19 0x1f 0x03 /* ar_user */
+					 0x14 0x1f 0x03>; /* aw_user */
+		};
+
+		fa_amac_idm1 {
+			reg = <0x18113408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x07 0x0f 0x07 /* aw_cache */
+					 0x19 0x1f 0x03 /* ar_user */
+					 0x14 0x1f 0x03>; /* aw_user */
+		};
+
+		pae {
+			reg = <0x1811f408 0x04>;
+			val-length = <6>;
+			coherency-val =	<0x19 0x01 0x01 /* aw_cache_sel */
+					 0x18 0x01 0x01 /* ar_cache_sel */
+					 0x10 0x0f 0x0b /* ar_cache */
+					 0x14 0x0f 0x07 /* aw_cache */
+					 0x02 0x1f 0x03 /* ar_user */
+					 0x07 0x1f 0x03>; /* aw_user */
+		};
+
+		dmac {
+			reg = <0x18114408 0x04>;
+			val-length = <1>;
+			coherency-val = <0x00 0x40033000 0x00003000>;
+		};
+
+		xhci {
+			reg = <0x18104408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x06 0x0f 0x0b /* ar_cache */
+					 0x02 0x0f 0x07 /* aw_cache */
+					 0x12 0x1f 0x03 /* ar_user */
+					 0x0c 0x1f 0x03>; /* aw_user */
+		};
+
+		ehci {
+			reg = <0x18115408 0x04>;
+			val-length = <2>;
+			coherency-val = <0x06 0x0f 0x0b /* ar_cache */
+					 0x02 0x0f 0x07>;  /* aw_cache */
+		};
+
+		sata {
+			reg = <0x1811e408 0x04>;
+			val-length = <4>;
+			coherency-val = <0x10 0x0f 0x0b /* ar_cache */
+					 0x14 0x0f 0x07 /* aw_cache */
+					 0x02 0x1f 0x03 /* ar_user */
+					 0x07 0x1f 0x03>; /* aw_user */
+		};
+	};
+};

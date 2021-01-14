@@ -164,16 +164,29 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		gpioa: gpio@20 {
-			compatible = "brcm,nsp-gpio-a";
-			reg = <0x0020 0x70>,
-			      <0x3f1c4 0x1c>;
-			#gpio-cells = <2>;
-			gpio-controller;
+		//gpioa: gpio@20 {
+		//	compatible = "brcm,nsp-gpio-a";
+		//	reg = <0x0020 0x70>,
+		//	      <0x3f1c4 0x1c>;
+		//	#gpio-cells = <2>;
+		//	gpio-controller;
+		//	ngpios = <32>;
+		//	interrupt-controller;
+		//	interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
+		//	gpio-ranges = <&pinctrl 0 0 32>;
+		//};
+		gpioa: gpio@0x0060 {
+			compatible = "brcm,iproc-gpio,cca";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = gpio: <0x00060 0x50>,
+				intr: <0x00000 0x50>,
+				dmu: <0x3f1c0 0x24>;
 			ngpios = <32>;
+			gpio-controller;
 			interrupt-controller;
 			interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
-			gpio-ranges = <&pinctrl 0 0 32>;
+			alt_func_sel;
 		};
 
 		uart0: serial@300 {
@@ -189,6 +202,16 @@
 			reg = <0x0400 0x100>;
 			interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&osc>;
+			status = "disabled";
+		};
+
+		uart2: serial@37000 {
+			compatible = "ns16550a";
+			reg = <0x37000 0x100>;
+			interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&osc>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
 			status = "disabled";
 		};
 
@@ -248,7 +271,7 @@
 			dma-coherent;
 			status = "disabled";
 		};
-
+/*
 		mailbox: mailbox@25000 {
 			compatible = "brcm,iproc-fa2-mbox";
 			reg = <0x25000 0x445>;
@@ -258,7 +281,23 @@
 			brcm,use-bcm-hdr;
 			dma-coherent;
 		};
+*/
 
+		nand: nand@0x26000 {
+			compatible = "brcm,iproc-nand";
+			reg =	nand_regs: <0x026000 0x1000>,
+				nand_idm_regs: <0x11b000 0x1000>,
+				nand_strap_regs: <0x03f2a0 0x4>;
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+			#chip-selects = <1>;
+			//timing-mode = <0>;
+			wp-mode = <1>;
+			hw-auto-init = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			bus-width = <8>;
+		};
+/*
 		nand: nand@26000 {
 			compatible = "brcm,nand-iproc", "brcm,brcmnand-v6.1";
 			reg = <0x026000 0x600>,
@@ -272,6 +311,7 @@
 
 			brcm,nand-has-wp;
 		};
+*/
 
 		qspi: qspi@27200 {
 			compatible = "brcm,spi-bcm-qspi", "brcm,spi-nsp-qspi";
@@ -306,8 +346,8 @@
 			compatible = "generic-xhci";
 			reg = <0x29000 0x1000>;
 			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
-			phys = <&usb3_phy>;
-			phy-names = "usb3-phy";
+			//phys = <&usb3_phy>;
+			//phy-names = "usb3-phy";
 			dma-coherent;
 			status = "disabled";
 		};
@@ -317,6 +357,8 @@
 			reg = <0x2a000 0x100>;
 			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
+			phys = <&usbphy0>;
+			phy-names = "bcm-usbphy";
 			status = "disabled";
 		};
 
@@ -325,14 +367,18 @@
 			reg = <0x2b000 0x100>;
 			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
 			dma-coherent;
+			phys = <&usbphy0>;
+			phy-names = "bcm-usbphy";
 			status = "disabled";
 		};
 
+		/*
 		crypto@2f000 {
 			compatible = "brcm,spum-nsp-crypto";
 			reg = <0x2f000 0x900>;
 			mboxes = <&mailbox 0>;
 		};
+		*/
 
 		gpiob: gpio@30000 {
 			compatible = "brcm,iproc-nsp-gpio", "brcm,iproc-gpio";
@@ -599,6 +645,33 @@
 				     <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>;
 			brcm,pcie-msi-inten;
 		};
+	};
+
+	usbphy0: usbphy@0x18115000 {
+		#phy-cells = <0>;
+		compatible = "brcm,usb-phy";
+		//reg = <0x18115000 0x1000>;
+		reg = <0x18115000 0x1000
+		       0x1802a600 0x100>;
+		coherent_val = <0xc3>;
+		coherent_mask = <0x7df>;
+		io_control_val = <0x3def>;
+		io_control_mask = <0xffff>;
+		status = "okay";
+	};
+
+	iproc-reboot@1803f184 {
+		compatible ="brcm,iproc-reboot";
+		reg = <0x1803f184 0x4>,
+		      <0x1803f020 0x4>;
+		method = <1>;
+	};
+
+	iproc-synce@1803f420 {
+		compatible ="brcm,iproc-synce";
+		reg = <0x1803f420 0x4>,
+		      <0x1803f1c0 0x4>;
+		gpio_enable_bit = <0x12>;
 	};
 
 	thermal-zones {

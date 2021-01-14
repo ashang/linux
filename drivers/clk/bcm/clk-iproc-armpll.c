@@ -226,6 +226,9 @@ static unsigned long iproc_arm_pll_recalc_rate(struct clk_hw *hw,
 		pll->rate = 0;
 		return 0;
 	}
+#if !defined(CONFIG_ARCH_BCM_NSP)
+	mdiv = 1;
+#endif
 	pll->rate = (ndiv * parent_rate) >> 20;
 	pll->rate = (pll->rate / pdiv) / mdiv;
 

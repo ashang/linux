@@ -183,4 +183,28 @@ config USB_ULPI_VIEWPORT
 	  Provides read/write operations to the ULPI phy register set for
 	  controllers with a viewport register (e.g. Chipidea/ARC controllers).
 
+config USBPHY_XGS_IPROC
+    tristate "BRCM iProc USB PHY"
+    depends on ARCH_IPROC
+    select USB_PHY
+    help
+        BRCM iProc USB PHY driver
+
+config USB_BCM_PHY
+	tristate "Broadcom USB PHY support"
+	depends on ARCH_BCM_IPROC
+	select USB_PHY
+	help
+	  Enable this to support the Broadcom USB PHY.
+
+	  BCM Phy is used by some of the Broadcom SoCs, for example Cygnus.
+
+config IPROC_USB3_PHY
+	tristate "Broadcom IPROC USB 3.0 PHY support"
+	depends on ARCH_BCM_IPROC
+	select USB_PHY
+	help
+	  Enable this to support the Broadcom IPROC USB 3.0 PHY.
+	  This driver supports Broadcom IPROC SoCs, e.g. Northstar Plus.
+
 endmenu

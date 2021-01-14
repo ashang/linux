@@ -63,3 +63,11 @@ config CLK_BCM_SR
 	default ARCH_BCM_IPROC
 	help
 	  Enable common clock framework support for the Broadcom Stingray SoC
+
+config COMMON_CLK_XGS_IPROC
+	bool "BRCM XGS iProc clock support"
+	depends on COMMON_CLK && ARCH_IPROC
+	default ARCH_IPROC
+	help
+	  Enable common clock framework support for Broadcom SoCs
+	  based on the iProc architecture

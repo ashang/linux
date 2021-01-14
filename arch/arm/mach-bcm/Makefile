@@ -17,7 +17,7 @@ obj-$(CONFIG_ARCH_BCM_CYGNUS) +=  bcm_cygnus.o
 obj-$(CONFIG_ARCH_BCM_HR2)	+= bcm_hr2.o
 
 # Northstar Plus
-obj-$(CONFIG_ARCH_BCM_NSP)	+= bcm_nsp.o
+obj-$(CONFIG_ARCH_BCM_NSP)	+= bcm_nsp.o iproc_coherent.o shm.o
 
 ifeq ($(CONFIG_ARCH_BCM_NSP),y)
 obj-$(CONFIG_SMP)		+= platsmp.o

@@ -24,3 +24,6 @@ obj-$(CONFIG_USB_MXS_PHY)		+= phy-mxs-usb.o
 obj-$(CONFIG_USB_ULPI)			+= phy-ulpi.o
 obj-$(CONFIG_USB_ULPI_VIEWPORT)		+= phy-ulpi-viewport.o
 obj-$(CONFIG_KEYSTONE_USB_PHY)		+= phy-keystone.o
+obj-$(CONFIG_USBPHY_XGS_IPROC)		+= phy-xgs-iproc.o
+obj-$(CONFIG_USB_BCM_PHY)		+= phy-bcm-usb.o
+obj-$(CONFIG_IPROC_USB3_PHY)		+= phy-iproc-usb.o

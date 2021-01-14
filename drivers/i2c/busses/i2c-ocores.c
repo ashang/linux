@@ -1,8 +1,10 @@
 /*
  * i2c-ocores.c: I2C bus driver for OpenCores I2C controller
  * (https://opencores.org/project/i2c/overview)
+ * Copyright (C) 2018 Cumulus Networks, Inc.  All rights reserved
  *
  * Peter Korsgaard <peter@korsgaard.com>
+ * Frank Hoeflich <frankh@cumulusnetworks.com>
  *
  * Support for the GRLIB port of the controller by
  * Andreas Larsson <andreas@gaisler.com>
@@ -25,9 +27,11 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/log2.h>
+#include <linux/delay.h>
 
 struct ocores_i2c {
 	void __iomem *base;
+	struct mutex lock;	/* protects ocores_process() data */
 	u32 reg_shift;
 	u32 reg_io_width;
 	wait_queue_head_t wait;
@@ -39,6 +43,7 @@ struct ocores_i2c {
 	struct clk *clk;
 	int ip_clock_khz;
 	int bus_clock_khz;
+	int mode;
 	void (*setreg)(struct ocores_i2c *i2c, int reg, u8 value);
 	u8 (*getreg)(struct ocores_i2c *i2c, int reg);
 };
@@ -73,6 +78,8 @@ struct ocores_i2c {
 #define STATE_WRITE		2
 #define STATE_READ		3
 #define STATE_ERROR		4
+#define STATE_INIT		5
+#define STATE_ADDR		6
 
 #define TYPE_OCORES		0
 #define TYPE_GRLIB		1
@@ -92,16 +99,6 @@ static void oc_setreg_32(struct ocores_i2c *i2c, int reg, u8 value)
 	iowrite32(value, i2c->base + (reg << i2c->reg_shift));
 }
 
-static void oc_setreg_16be(struct ocores_i2c *i2c, int reg, u8 value)
-{
-	iowrite16be(value, i2c->base + (reg << i2c->reg_shift));
-}
-
-static void oc_setreg_32be(struct ocores_i2c *i2c, int reg, u8 value)
-{
-	iowrite32be(value, i2c->base + (reg << i2c->reg_shift));
-}
-
 static inline u8 oc_getreg_8(struct ocores_i2c *i2c, int reg)
 {
 	return ioread8(i2c->base + (reg << i2c->reg_shift));
@@ -117,16 +114,6 @@ static inline u8 oc_getreg_32(struct ocores_i2c *i2c, int reg)
 	return ioread32(i2c->base + (reg << i2c->reg_shift));
 }
 
-static inline u8 oc_getreg_16be(struct ocores_i2c *i2c, int reg)
-{
-	return ioread16be(i2c->base + (reg << i2c->reg_shift));
-}
-
-static inline u8 oc_getreg_32be(struct ocores_i2c *i2c, int reg)
-{
-	return ioread32be(i2c->base + (reg << i2c->reg_shift));
-}
-
 static inline void oc_setreg(struct ocores_i2c *i2c, int reg, u8 value)
 {
 	i2c->setreg(i2c, reg, value);
@@ -137,39 +124,73 @@ static inline u8 oc_getreg(struct ocores_i2c *i2c, int reg)
 	return i2c->getreg(i2c, reg);
 }
 
-static void ocores_process(struct ocores_i2c *i2c)
+static int
+ocores_process(struct ocores_i2c *i2c)
 {
 	struct i2c_msg *msg = i2c->msg;
-	u8 stat = oc_getreg(i2c, OCI2C_STATUS);
-
-	if ((i2c->state == STATE_DONE) || (i2c->state == STATE_ERROR)) {
+	u8 stat;
+    
+	stat = oc_getreg(i2c, OCI2C_STATUS);
+	if ((stat & OCI2C_STAT_TIP) != 0){
+		return -EBUSY;
+	}
+	if (i2c->state == STATE_DONE) {
 		/* stop has been sent */
-		oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_IACK);
-		wake_up(&i2c->wait);
-		return;
+		if (i2c->mode == OCI2C_INTERRUPT)
+			wake_up(&i2c->wait);
+		else
+			oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_IACK);
+		return 0;
+	}
+
+	if (i2c->state == STATE_ERROR) {
+		/* stop has been sent */
+		if (i2c->mode == OCI2C_INTERRUPT)
+			wake_up(&i2c->wait);
+		else
+			oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_IACK);
+		return -EIO;
+	}
+
+	if (i2c->state == STATE_INIT) {
+		if (stat & OCI2C_STAT_BUSY){
+			return -EBUSY;
+		}
+		i2c->state = STATE_ADDR;
+	}
+
+	if (i2c->state == STATE_ADDR) {
+		u8 addr = (msg->addr << 1);
+		if (msg->flags & I2C_M_RD)
+			addr |= 1;
+
+		i2c->state = STATE_START;
+
+		oc_setreg(i2c, OCI2C_DATA, addr);
+		oc_setreg(i2c, OCI2C_CMD,  OCI2C_CMD_START);
+		return 0;
 	}
 
 	/* error? */
 	if (stat & OCI2C_STAT_ARBLOST) {
 		i2c->state = STATE_ERROR;
 		oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
-		return;
+		return -EAGAIN;
 	}
 
 	if ((i2c->state == STATE_START) || (i2c->state == STATE_WRITE)) {
-		i2c->state =
-			(msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
+		i2c->state = (msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
 
 		if (stat & OCI2C_STAT_NACK) {
 			i2c->state = STATE_ERROR;
 			oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
-			return;
+			return -ENXIO;
 		}
 	} else
 		msg->buf[i2c->pos++] = oc_getreg(i2c, OCI2C_DATA);
 
 	/* end of msg? */
-	if (i2c->pos == msg->len) {
+	if (i2c->pos >= msg->len) {
 		i2c->nmsgs--;
 		i2c->msg++;
 		i2c->pos = 0;
@@ -178,65 +199,115 @@ static void ocores_process(struct ocores_i2c *i2c)
 		if (i2c->nmsgs) {	/* end? */
 			/* send start? */
 			if (!(msg->flags & I2C_M_NOSTART)) {
-				u8 addr = i2c_8bit_addr_from_msg(msg);
-
-				i2c->state = STATE_START;
-
-				oc_setreg(i2c, OCI2C_DATA, addr);
-				oc_setreg(i2c, OCI2C_CMD,  OCI2C_CMD_START);
-				return;
+				i2c->state = STATE_ADDR;
+				return 0;
 			} else
 				i2c->state = (msg->flags & I2C_M_RD)
 					? STATE_READ : STATE_WRITE;
 		} else {
 			i2c->state = STATE_DONE;
 			oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
-			return;
+			return 0;
 		}
 	}
 
-	if (i2c->state == STATE_READ) {
-		oc_setreg(i2c, OCI2C_CMD, i2c->pos == (msg->len-1) ?
+	if (i2c->state == STATE_READ)
+		oc_setreg(i2c, OCI2C_CMD, i2c->pos == (msg->len - 1) ?
 			  OCI2C_CMD_READ_NACK : OCI2C_CMD_READ_ACK);
-	} else {
+	else {
 		oc_setreg(i2c, OCI2C_DATA, msg->buf[i2c->pos++]);
 		oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_WRITE);
 	}
+
+	return 0;
 }
 
-static irqreturn_t ocores_isr(int irq, void *dev_id)
+static int
+ocores_poll(struct ocores_i2c *i2c, int num)
 {
-	struct ocores_i2c *i2c = dev_id;
+	int ret;
+	int granularity = 20;
+	int initgran = 100;
+	/* timeout in usec; if no response, could be up to twice this */
+	int timeout = 20000;
 
-	ocores_process(i2c);
+	/*
+	 * Only called if we are in polling mode, i.e.
+	 * (i2c->mode == OCI2C_POLL).
+	 *
+	 * Returns:
+	 *     >= 0: count of msgs left to process, 0 if done
+	 *      < 0: errno from ocores_process()
+	 */
+	do {
+		int gran = 0;
 
-	return IRQ_HANDLED;
+		mutex_lock(&i2c->lock);
+		ret = ocores_process(i2c);
+		mutex_unlock(&i2c->lock);
+
+		if (i2c->state == STATE_DONE)
+			return num;
+
+		if (i2c->state == STATE_ERROR)
+			return ret;
+
+		if (gran == 0)
+			gran = initgran;
+		else
+			gran = granularity;
+
+		usleep_range(gran, (2 * gran));
+		timeout -= min(timeout, gran);
+	} while (timeout > 0);
+
+	i2c->state = STATE_ERROR;
+	return -ETIMEDOUT;
 }
 
-static int ocores_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+static int
+ocores_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
-	struct ocores_i2c *i2c = i2c_get_adapdata(adap);
+	int ret;
+	int mode;
+	struct ocores_i2c *i2c;
+
+	i2c = i2c_get_adapdata(adap);
 
 	i2c->msg = msgs;
 	i2c->pos = 0;
 	i2c->nmsgs = num;
-	i2c->state = STATE_START;
 
-	oc_setreg(i2c, OCI2C_DATA, i2c_8bit_addr_from_msg(i2c->msg));
-	oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_START);
+	i2c->state = STATE_INIT;
+	mode = i2c->mode;
 
-	if (wait_event_timeout(i2c->wait, (i2c->state == STATE_ERROR) ||
-			       (i2c->state == STATE_DONE), HZ))
-		return (i2c->state == STATE_DONE) ? num : -EIO;
-	else
-		return -ETIMEDOUT;
+	if (mode == OCI2C_INTERRUPT) {
+		ret = wait_event_timeout(i2c->wait,
+					 (i2c->state == STATE_ERROR) ||
+					 (i2c->state == STATE_DONE),
+					 HZ);
+	} else {
+		ret = ocores_poll(i2c, num);
+	}
+	return ret;
 }
 
 static int ocores_init(struct device *dev, struct ocores_i2c *i2c)
 {
 	int prescale;
 	int diff;
-	u8 ctrl = oc_getreg(i2c, OCI2C_CONTROL);
+	u8 ctrl;
+
+	ctrl = oc_getreg(i2c, OCI2C_CONTROL);
+
+	/*
+	 * From the I2C-Master Core Specification: Clear the 'EN' bit only when
+	 * no transfer is in progress, i.e. after a STOP command, or when the
+	 * command register has the STO bit set. When halted during a transfer,
+	 * the core can hang the I2C bus.
+	 */
+	if (ctrl & OCI2C_CTRL_EN)
+		oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
 
 	/* make sure the device is disabled */
 	oc_setreg(i2c, OCI2C_CONTROL, ctrl & ~(OCI2C_CTRL_EN|OCI2C_CTRL_IEN));
@@ -252,13 +323,20 @@ static int ocores_init(struct device *dev, struct ocores_i2c *i2c)
 		return -EINVAL;
 	}
 
+	prescale = 0xc7;
 	oc_setreg(i2c, OCI2C_PRELOW, prescale & 0xff);
 	oc_setreg(i2c, OCI2C_PREHIGH, prescale >> 8);
 
 	/* Init the device */
 	oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_IACK);
-	oc_setreg(i2c, OCI2C_CONTROL, ctrl | OCI2C_CTRL_IEN | OCI2C_CTRL_EN);
 
+	if (i2c->mode == OCI2C_INTERRUPT)
+		ctrl |= (OCI2C_CTRL_IEN | OCI2C_CTRL_EN);
+	else
+		ctrl |= OCI2C_CTRL_EN;
+
+	oc_setreg(i2c, OCI2C_CONTROL, ctrl);
+	oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
 	return 0;
 }
 
@@ -273,7 +351,7 @@ static const struct i2c_algorithm ocores_algorithm = {
 	.functionality = ocores_func,
 };
 
-static const struct i2c_adapter ocores_adapter = {
+static struct i2c_adapter ocores_adapter = {
 	.owner = THIS_MODULE,
 	.name = "i2c-ocores",
 	.class = I2C_CLASS_DEPRECATED,
@@ -301,6 +379,7 @@ static u8 oc_getreg_grlib(struct ocores_i2c *i2c, int reg)
 {
 	u32 rd;
 	int rreg = reg;
+
 	if (reg != OCI2C_PRELOW)
 		rreg--;
 	rd = ioread32be(i2c->base + (rreg << i2c->reg_shift));
@@ -314,6 +393,7 @@ static void oc_setreg_grlib(struct ocores_i2c *i2c, int reg, u8 value)
 {
 	u32 curr, wr;
 	int rreg = reg;
+
 	if (reg != OCI2C_PRELOW)
 		rreg--;
 	if (reg == OCI2C_PRELOW || reg == OCI2C_PREHIGH) {
@@ -331,11 +411,13 @@ static void oc_setreg_grlib(struct ocores_i2c *i2c, int reg, u8 value)
 static int ocores_i2c_of_probe(struct platform_device *pdev,
 				struct ocores_i2c *i2c)
 {
-	struct device_node *np = pdev->dev.of_node;
+	struct device_node *np;
 	const struct of_device_id *match;
 	u32 val;
 	u32 clock_frequency;
 	bool clock_frequency_present;
+
+	np = pdev->dev.of_node;
 
 	if (of_property_read_u32(np, "reg-shift", &i2c->reg_shift)) {
 		/* no 'reg-shift', check for deprecated 'regstep' */
@@ -376,7 +458,6 @@ static int ocores_i2c_of_probe(struct platform_device *pdev,
 			if (!clock_frequency_present) {
 				dev_err(&pdev->dev,
 					"Missing required parameter 'opencores,ip-clock-frequency'\n");
-				clk_disable_unprepare(i2c->clk);
 				return -ENODEV;
 			}
 			i2c->ip_clock_khz = clock_frequency / 1000;
@@ -410,28 +491,30 @@ static int ocores_i2c_probe(struct platform_device *pdev)
 	struct ocores_i2c *i2c;
 	struct ocores_i2c_platform_data *pdata;
 	struct resource *res;
-	int irq;
+	int irq = 0;
 	int ret;
 	int i;
-
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
-		return irq;
 
 	i2c = devm_kzalloc(&pdev->dev, sizeof(*i2c), GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res)
+		return -ENOMEM;
+
 	i2c->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(i2c->base))
 		return PTR_ERR(i2c->base);
+
+	mutex_init(&i2c->lock);
 
 	pdata = dev_get_platdata(&pdev->dev);
 	if (pdata) {
 		i2c->reg_shift = pdata->reg_shift;
 		i2c->reg_io_width = pdata->reg_io_width;
 		i2c->ip_clock_khz = pdata->clock_khz;
+		i2c->mode = pdata->interrupt_mode;
 		i2c->bus_clock_khz = 100;
 	} else {
 		ret = ocores_i2c_of_probe(pdev, i2c);
@@ -443,9 +526,6 @@ static int ocores_i2c_probe(struct platform_device *pdev)
 		i2c->reg_io_width = 1; /* Set to default value */
 
 	if (!i2c->setreg || !i2c->getreg) {
-		bool be = pdata ? pdata->big_endian :
-			of_device_is_big_endian(pdev->dev.of_node);
-
 		switch (i2c->reg_io_width) {
 		case 1:
 			i2c->setreg = oc_setreg_8;
@@ -453,34 +533,31 @@ static int ocores_i2c_probe(struct platform_device *pdev)
 			break;
 
 		case 2:
-			i2c->setreg = be ? oc_setreg_16be : oc_setreg_16;
-			i2c->getreg = be ? oc_getreg_16be : oc_getreg_16;
+			i2c->setreg = oc_setreg_16;
+			i2c->getreg = oc_getreg_16;
 			break;
 
 		case 4:
-			i2c->setreg = be ? oc_setreg_32be : oc_setreg_32;
-			i2c->getreg = be ? oc_getreg_32be : oc_getreg_32;
+			i2c->setreg = oc_setreg_32;
+			i2c->getreg = oc_getreg_32;
 			break;
 
 		default:
 			dev_err(&pdev->dev, "Unsupported I/O width (%d)\n",
 				i2c->reg_io_width);
-			ret = -EINVAL;
-			goto err_clk;
+			return -EINVAL;
 		}
+	}
+
+	if (i2c->mode == OCI2C_INTERRUPT) {
+		irq = platform_get_irq(pdev, 0);
+		if (irq < 0)
+			return irq;
 	}
 
 	ret = ocores_init(&pdev->dev, i2c);
 	if (ret)
-		goto err_clk;
-
-	init_waitqueue_head(&i2c->wait);
-	ret = devm_request_irq(&pdev->dev, irq, ocores_isr, 0,
-			       pdev->name, i2c);
-	if (ret) {
-		dev_err(&pdev->dev, "Cannot claim IRQ\n");
-		goto err_clk;
-	}
+		return ret;
 
 	/* hook up driver to tree */
 	platform_set_drvdata(pdev, i2c);
@@ -491,25 +568,25 @@ static int ocores_i2c_probe(struct platform_device *pdev)
 
 	/* add i2c adapter to i2c tree */
 	ret = i2c_add_adapter(&i2c->adap);
-	if (ret)
-		goto err_clk;
-
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to add  adapter %d\n",
+			i2c->adap.nr);
+		return ret;
+	}
 	/* add in known devices to the bus */
 	if (pdata) {
 		for (i = 0; i < pdata->num_devices; i++)
 			i2c_new_device(&i2c->adap, pdata->devices + i);
 	}
-
+    
 	return 0;
-
-err_clk:
-	clk_disable_unprepare(i2c->clk);
-	return ret;
 }
 
 static int ocores_i2c_remove(struct platform_device *pdev)
 {
-	struct ocores_i2c *i2c = platform_get_drvdata(pdev);
+	struct ocores_i2c *i2c;
+
+	i2c = platform_get_drvdata(pdev);
 
 	/* disable i2c logic */
 	oc_setreg(i2c, OCI2C_CONTROL, oc_getreg(i2c, OCI2C_CONTROL)
@@ -580,3 +657,4 @@ MODULE_AUTHOR("Peter Korsgaard <peter@korsgaard.com>");
 MODULE_DESCRIPTION("OpenCores I2C bus driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:ocores-i2c");
+

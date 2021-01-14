@@ -537,7 +537,7 @@ static void esdhc_clock_enable(struct sdhci_host *host, bool enable)
 		if (sdhci_readl(host, ESDHC_PRSSTAT) & val)
 			break;
 		if (timedout) {
-			pr_err("%s: Internal clock never stabilised.\n",
+			pr_debug("%s: Internal clock never stabilised.\n",
 				mmc_hostname(host->mmc));
 			break;
 		}
@@ -606,7 +606,7 @@ static void esdhc_of_set_clock(struct sdhci_host *host, unsigned int clock)
 		if (sdhci_readl(host, ESDHC_PRSSTAT) & ESDHC_CLOCK_STABLE)
 			break;
 		if (timedout) {
-			pr_err("%s: Internal clock never stabilised.\n",
+			pr_debug("%s: Internal clock never stabilised.\n",
 				mmc_hostname(host->mmc));
 			return;
 		}
