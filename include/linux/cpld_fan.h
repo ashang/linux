@@ -38,6 +38,7 @@ struct fan_info {
 	struct mutex update_lock;
 	unsigned long last_updated;	/* In jiffies */
 	struct platform_device *pdev;
+	int valid;
 
 	// fan
 	int fan_num;
