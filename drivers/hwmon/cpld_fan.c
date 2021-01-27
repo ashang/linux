@@ -38,7 +38,7 @@ static void fan_update_device(struct device *dev)
 	int i;
 
 	mutex_lock(&fi->update_lock);
-	if (time_after(jiffies, fi->last_updated + 2 * HZ)) {
+	if (time_after(jiffies, fi->last_updated + 2 * HZ) || !fi->valid) {
 		fi->last_updated = jiffies;
 
 		for (i = 0; i < fi->fan_num; i++) {
@@ -86,6 +86,8 @@ static void fan_update_device(struct device *dev)
 		for (i = 0; i < fi->temp_num; i++) {
 			fi->temp_input[i] = fi->cpld_get_temp_input(i);
 		}
+
+		fi->valid = 1;
 	}
 	mutex_unlock(&fi->update_lock);
 }
