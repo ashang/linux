@@ -34,6 +34,7 @@
 #define SIOCGETVIFCNT	SIOCPROTOPRIVATE	/* IP protocol privates */
 #define SIOCGETSGCNT	(SIOCPROTOPRIVATE+1)
 #define SIOCGETRPF	(SIOCPROTOPRIVATE+2)
+#define SIOCSETSGCNT	(SIOCPROTOPRIVATE+3) /* 0x89E3 */
 
 /* MRT_FLUSH optional flags */
 #define MRT_FLUSH_MFC	1	/* Flush multicast entries */
