@@ -1648,6 +1648,22 @@ int ipmr_ioctl(struct sock *sk, int cmd, void __user *arg)
 		}
 		rcu_read_unlock();
 		return -EADDRNOTAVAIL;
+	case SIOCSETSGCNT:
+		if (copy_from_user(&sr, arg, sizeof(sr)))
+			return -EFAULT;
+
+		rcu_read_lock();
+		c = ipmr_cache_find(mrt, sr.src.s_addr, sr.grp.s_addr);
+		if (c) {
+			c->mfc_un.res.pkt += sr.pktcnt;
+			c->mfc_un.res.bytes += sr.bytecnt;
+			rcu_read_unlock();
+
+			return 0;
+		}
+		rcu_read_unlock();
+		return -EADDRNOTAVAIL;
+
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -1719,6 +1735,21 @@ int ipmr_compat_ioctl(struct sock *sk, unsigned int cmd, void __user *arg)
 
 			if (copy_to_user(arg, &sr, sizeof(sr)))
 				return -EFAULT;
+			return 0;
+		}
+		rcu_read_unlock();
+		return -EADDRNOTAVAIL;
+	case SIOCSETSGCNT:
+		if (copy_from_user(&sr, arg, sizeof(sr)))
+			return -EFAULT;
+
+		rcu_read_lock();
+		c = ipmr_cache_find(mrt, sr.src.s_addr, sr.grp.s_addr);
+		if (c) {
+			c->mfc_un.res.pkt += sr.pktcnt;
+			c->mfc_un.res.bytes += sr.bytecnt;
+			rcu_read_unlock();
+
 			return 0;
 		}
 		rcu_read_unlock();
