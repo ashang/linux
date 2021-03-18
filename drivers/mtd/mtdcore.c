@@ -1246,15 +1246,7 @@ int mtd_read(struct mtd_info *mtd, loff_t from, size_t len, size_t *retlen,
 	ret = mtd_read_oob(mtd, from, &ops);
 	*retlen = ops.retlen;
 
-	/* PICA8 TODO */
-	if (unlikely(ret_code < 0))
-		return ret_code;
-	if (mtd->ecc_strength == 0)
-		return 0;	/* device lacks ecc */
-	if (ret_code < mtd->bitflip_threshold)
-		return 0;
-	else
-		return ret_code > mtd->bitflip_retirelimit ? -ENAVAIL : -EUCLEAN;
+	return ret;
 }
 EXPORT_SYMBOL_GPL(mtd_read);
 
