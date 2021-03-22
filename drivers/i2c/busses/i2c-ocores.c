@@ -412,7 +412,7 @@ static int ocores_xfer_polling(struct i2c_adapter *adap,
 static int ocores_xfer(struct i2c_adapter *adap,
 		       struct i2c_msg *msgs, int num)
 {
-	return ocores_xfer_core(i2c_get_adapdata(adap), msgs, num, false);
+	return ocores_xfer_core(i2c_get_adapdata(adap), msgs, num, true/*false*/);
 }
 
 static int ocores_init(struct device *dev, struct ocores_i2c *i2c)
