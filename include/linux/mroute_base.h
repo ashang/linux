@@ -93,7 +93,7 @@ static inline int mr_call_vif_notifiers(struct net *net,
 /* This one is nasty; value is defined in uapi using different symbols for
  * mroute and morute6 but both map into same 32.
  */
-#define MAXVIFS	32
+#define MAXVIFS	256
 #endif
 
 #define VIF_EXISTS(_mrt, _idx) (!!((_mrt)->vif_table[_idx].dev))

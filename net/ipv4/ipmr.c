@@ -1655,8 +1655,8 @@ int ipmr_ioctl(struct sock *sk, int cmd, void __user *arg)
 		rcu_read_lock();
 		c = ipmr_cache_find(mrt, sr.src.s_addr, sr.grp.s_addr);
 		if (c) {
-			c->mfc_un.res.pkt += sr.pktcnt;
-			c->mfc_un.res.bytes += sr.bytecnt;
+			c->_c.mfc_un.res.pkt += sr.pktcnt;
+			c->_c.mfc_un.res.bytes += sr.bytecnt;
 			rcu_read_unlock();
 
 			return 0;
