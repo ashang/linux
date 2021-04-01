@@ -50,6 +50,8 @@
 
 #define PCA954X_IRQ_OFFSET 4
 
+static int deselect_on_exit;
+
 enum pca_type {
 	pca_9540,
 	pca_9542,
@@ -307,7 +309,7 @@ static ssize_t idle_state_store(struct device *dev,
 	 * Set the mux into a state consistent with the new
 	 * idle_state.
 	 */
-	if (data->last_chan || val != MUX_IDLE_DISCONNECT)
+	if (data->last_chan || val != MUX_IDLE_DISCONNECT || deselect_on_exit)
 		ret = pca954x_deselect_mux(muxc, 0);
 
 	i2c_unlock_bus(muxc->parent, I2C_LOCK_SEGMENT);
@@ -424,6 +426,10 @@ static int pca954x_probe(struct i2c_client *client,
 
 	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
 		return -ENODEV;
+
+#ifdef CONFIG_I2C_MUX_PCA954X_DESELECT_ON_EXIT
+        deselect_on_exit = 1;
+#endif
 
 	muxc = i2c_mux_alloc(adap, dev, PCA954X_MAX_NCHANS, sizeof(*data), 0,
 			     pca954x_select_chan, pca954x_deselect_mux);
