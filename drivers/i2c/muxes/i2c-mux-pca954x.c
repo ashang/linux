@@ -309,7 +309,7 @@ static ssize_t idle_state_store(struct device *dev,
 	 * Set the mux into a state consistent with the new
 	 * idle_state.
 	 */
-	if (data->last_chan || val != MUX_IDLE_DISCONNECT || deselect_on_exit)
+	if (data->last_chan || val != MUX_IDLE_DISCONNECT)
 		ret = pca954x_deselect_mux(muxc, 0);
 
 	i2c_unlock_bus(muxc->parent, I2C_LOCK_SEGMENT);
@@ -489,6 +489,14 @@ static int pca954x_probe(struct i2c_client *client,
 		dev_warn(dev, "probe failed\n");
 		return -ENODEV;
 	}
+
+	data->last_chan = 0;		   /* force the first selection */
+	data->idle_state = (deselect_on_exit?MUX_IDLE_DISCONNECT:MUX_IDLE_AS_IS);
+
+	idle_disconnect_dt = np &&
+		of_property_read_bool(np, "i2c-mux-idle-disconnect");
+	if (idle_disconnect_dt)
+		data->idle_state = MUX_IDLE_DISCONNECT;
 
 	ret = pca954x_irq_setup(muxc);
 	if (ret)
