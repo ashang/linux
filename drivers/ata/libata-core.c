@@ -2025,7 +2025,7 @@ retry:
 
 	if (err_mask && dma) {
 		dev->horkage |= ATA_HORKAGE_NO_DMA_LOG;
-		ata_dev_warn(dev, "READ LOG DMA EXT failed, trying PIO\n");
+		ata_dev_info(dev, "READ LOG DMA EXT failed, trying PIO\n");
 		goto retry;
 	}
 
@@ -3270,7 +3270,7 @@ static int ata_dev_set_mode(struct ata_device *dev)
 	return 0;
 
  fail:
-	ata_dev_err(dev, "failed to set xfermode (err_mask=0x%x)\n", err_mask);
+	ata_dev_info(dev, "failed to set xfermode (err_mask=0x%x)\n", err_mask);
 	return -EIO;
 }
 
