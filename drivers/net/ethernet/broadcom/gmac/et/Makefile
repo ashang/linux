@@ -20,7 +20,7 @@ ETSRCDIR := ../src/et
 et-objs := $(ETSRCDIR)/sys/et_linux.o $(ETSRCDIR)/sys/etc.o
 
 ## from linux dir ##########
-export SRCBASE_et := $(src)/$(ETSRCDIR)/sys/../../
+export SRCBASE_et := $(srctree)/$(src)/$(ETSRCDIR)/sys/../..
 KBUILD_CFLAGS += -I$(SRCBASE_et)/include -DBCMDRIVER -Dlinux
 KBUILD_AFLAGS += -I$(SRCBASE_et)/include
 #################################
@@ -50,7 +50,7 @@ EXTRA_CFLAGS	+= -DGMAC_NAPI2_POLL
 endif
 endif
 
-EXTRA_CFLAGS	+= -I$(src)/$(ETSRCDIR)/sys
+EXTRA_CFLAGS	+= -I$(srctree)/$(src)/$(ETSRCDIR)/sys
 
 ifneq ($(KERNELRELEASE),)
 # kbuild part of makefile

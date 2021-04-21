@@ -6,13 +6,16 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
-#include "skeleton.dtsi"
+//#include "skeleton.dtsi"
 
 
 / {
 	model = "Broadcom HX4 SVK";
 	compatible = "brcm,helix4", "brcm,iproc-p2", "dellemc,n3048";
 	interrupt-parent = <&gic>;
+
+	#address-cells = <1>;
+	#size-cells = <1>;
 
 	aliases {
 		serial0 = &uart0;

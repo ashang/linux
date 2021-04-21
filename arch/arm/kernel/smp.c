@@ -58,6 +58,8 @@
  */
 struct secondary_data secondary_data;
 
+volatile int pen_release = -1;
+
 enum ipi_msg_type {
 	IPI_WAKEUP,
 	IPI_TIMER,

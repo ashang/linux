@@ -326,7 +326,6 @@ config ARCH_MULTIPLATFORM
 	select GENERIC_CLOCKEVENTS
 	select GENERIC_IRQ_MULTI_HANDLER
 	select HAVE_PCI
-	select PCI_DOMAINS_GENERIC if PCI
 	select SPARSE_IRQ
 	select USE_OF
 
@@ -564,6 +563,7 @@ config ARCH_IPROC
 	select ARM_ERRATA_754322
 	select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_775420
+	select PCI_DOMAINS_GENERIC if PCI
 	help
 	  This is a common family of Broadcom Cortex A9 based boards
 
@@ -683,10 +683,6 @@ source "arch/arm/mach-imx/Kconfig"
 source "arch/arm/mach-integrator/Kconfig"
 
 source "arch/arm/mach-iop32x/Kconfig"
-
-source "arch/arm/mach-iop33x/Kconfig"
-
-source "arch/arm/mach-iop13xx/Kconfig"
 
 source "arch/arm/mach-iproc/Kconfig"
 

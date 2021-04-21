@@ -310,8 +310,10 @@ module_param(msglevel, uint, 0644);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
 static const struct ethtool_ops et_ethtool_ops = {
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 0, 0)
     .get_settings = et_get_settings,
     .set_settings = et_set_settings,
+#endif
     .get_drvinfo = et_get_driver_info,
 };
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36) */

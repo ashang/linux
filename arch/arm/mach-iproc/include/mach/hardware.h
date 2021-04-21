@@ -16,7 +16,7 @@
 #ifndef __PLAT_IPROC_HARDWARE_H
 #define __PLAT_IPROC_HARDWARE_H
 
-#include <asm/sizes.h>
+//#include <asm/sizes.h>
 #include <mach/memory.h>
 
 /* Hardware addresses of major areas.

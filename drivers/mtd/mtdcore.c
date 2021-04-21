@@ -1243,6 +1243,7 @@ int mtd_read(struct mtd_info *mtd, loff_t from, size_t len, size_t *retlen,
 	};
 	int ret;
 
+	/* TODO */
 	ret = mtd_read_oob(mtd, from, &ops);
 	*retlen = ops.retlen;
 

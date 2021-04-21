@@ -249,12 +249,13 @@ EXPORT_SYMBOL(iproc_device_create_file);
 struct device *iproc_device_create(struct class *class, 
 	struct device *parent, dev_t devt, void *drvdata, const char *fmt, ...)
 {
-	va_list args;
+	va_list vargs;
 	struct device *r;
 
-	va_start(args, fmt);
-	r = device_create_vargs(class, parent, devt, drvdata, fmt, args);
-	va_end(args);
+	va_start(vargs, fmt);
+	//r = device_create_vargs(class, parent, devt, drvdata, fmt, args);
+	r = device_create_with_groups(class, parent, devt, drvdata, NULL, fmt, vargs);
+	va_end(vargs);
 
 	return r; 
 }
