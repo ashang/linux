@@ -855,9 +855,13 @@ EXPORT_SYMBOL_GPL(hwmon_device_register_with_info);
  */
 struct device *hwmon_device_register(struct device *dev)
 {
+	/* ours device is special,
+	 * which is created with various numbers */
+#if 0
 	dev_warn(dev,
 		 "hwmon_device_register() is deprecated. Please convert the driver to use hwmon_device_register_with_info().\n");
 
+#endif
 	return __hwmon_device_register(dev, NULL, NULL, NULL, NULL);
 }
 EXPORT_SYMBOL_GPL(hwmon_device_register);

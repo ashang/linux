@@ -177,12 +177,8 @@ static ssize_t show_fan_fault(struct device *dev,
 
 	fan_update_device(dev);
 	if (attr->index & FANR) {
-		if (fi->fanr_fault[index] < 0)
-			return sprintf(buf, "N/A\n");
 		return sprintf(buf, "%d\n", (fi->fanr_fault[index]));
 	} else {
-		if (fi->fan_fault[index] < 0)
-			return sprintf(buf, "N/A\n");
 		return sprintf(buf, "%d\n", (fi->fan_fault[index]));
 	}
 }
