@@ -350,7 +350,7 @@
 	};
 
 	i2c1: i2c@0x1803b000 {
-		compatible = "brcm,iproc-i2c";
+		compatible = "brcm,iproc-smb";
 		reg = <0x1803b000 0x100>;
 		interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
 		#bus-id = <1>;
