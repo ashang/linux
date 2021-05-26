@@ -118,7 +118,8 @@ const struct fib_prop fib_props[RTN_MAX + 1] = {
 		.scope	= RT_SCOPE_UNIVERSE,
 	},
 	[RTN_BLACKHOLE] = {
-		.error	= -EINVAL,
+		//.error	= -EINVAL,
+		.error	= -EHOSTUNREACH,
 		.scope	= RT_SCOPE_UNIVERSE,
 	},
 	[RTN_UNREACHABLE] = {
