@@ -1905,6 +1905,24 @@ int ip6mr_ioctl(struct sock *sk, int cmd, void __user *arg)
 		}
 		rcu_read_unlock();
 		return -EADDRNOTAVAIL;
+	case SIOCSETSGCNT_IN6:
+		if (copy_from_user(&sr, arg, sizeof(sr)))
+			return -EFAULT;
+
+		rcu_read_lock();
+		c = ip6mr_cache_find(mrt, &sr.src.sin6_addr, &sr.grp.sin6_addr);
+		if (c) {
+			c->_c.mfc_un.res.pkt += sr.pktcnt;
+			c->_c.mfc_un.res.bytes += sr.bytecnt;
+			rcu_read_unlock();
+
+			if (copy_to_user(arg, &sr, sizeof(sr)))
+				return -EFAULT;
+			return 0;
+		}
+		rcu_read_unlock();
+		return -EADDRNOTAVAIL;
+
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -1980,6 +1998,24 @@ int ip6mr_compat_ioctl(struct sock *sk, unsigned int cmd, void __user *arg)
 		}
 		rcu_read_unlock();
 		return -EADDRNOTAVAIL;
+	case SIOCSETSGCNT_IN6:
+		if (copy_from_user(&sr, arg, sizeof(sr)))
+			return -EFAULT;
+
+		rcu_read_lock();
+		c = ip6mr_cache_find(mrt, &sr.src.sin6_addr, &sr.grp.sin6_addr);
+		if (c) {
+			c->_c.mfc_un.res.pkt += sr.pktcnt;
+			c->_c.mfc_un.res.bytes += sr.bytecnt;
+			rcu_read_unlock();
+
+			if (copy_to_user(arg, &sr, sizeof(sr)))
+				return -EFAULT;
+			return 0;
+		}
+		rcu_read_unlock();
+		return -EADDRNOTAVAIL;
+
 	default:
 		return -ENOIOCTLCMD;
 	}
