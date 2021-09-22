@@ -120,6 +120,11 @@ static ssize_t show_pwm(struct device *dev,
 		return -EINVAL;
 	}
 
+	if (attr->index >= fi->fan_num) {
+		/* show pwm mode */
+		return sprintf(buf, "%d\n", fi->pwm_manual);
+	}
+
 	fan_update_device(dev);
 
 	if (fi->pwm[attr->index] < 0)
@@ -134,6 +139,7 @@ static ssize_t set_pwm(struct device *dev,
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
 	unsigned long val;
 	int res;
+	int i;
 
 	if (!fi->cpld_set_pwm) {
 		return -EINVAL;
@@ -146,7 +152,19 @@ static ssize_t set_pwm(struct device *dev,
 
 	val = clamp_val(val, 0, 255);
 	mutex_lock(&fi->update_lock);
-	fi->cpld_set_pwm(attr->index, val);
+	if (attr->index >= fi->fan_num) {
+		/* pwm_manual: 0 means auto mode, 1-255 means manual pwm value */
+		if (val) {
+			for (i = 0; i < fi->fan_num; i++)
+				fi->cpld_set_pwm(i, val);
+			fi->pwm_manual = val;
+		} else
+			fi->pwm_manual = 0;
+	} else if (!fi->pwm_manual)
+		fi->cpld_set_pwm(attr->index, val);
+	else {
+		/* nothing */
+	}
 	mutex_unlock(&fi->update_lock);
 	return count;
 }
@@ -190,6 +208,7 @@ static SENSOR_DEVICE_ATTR(pwm3, S_IWUSR | S_IRUGO, show_pwm, set_pwm, 2);
 static SENSOR_DEVICE_ATTR(pwm4, S_IWUSR | S_IRUGO, show_pwm, set_pwm, 3);
 static SENSOR_DEVICE_ATTR(pwm5, S_IWUSR | S_IRUGO, show_pwm, set_pwm, 4);
 static SENSOR_DEVICE_ATTR(pwm6, S_IWUSR | S_IRUGO, show_pwm, set_pwm, 5);
+static SENSOR_DEVICE_ATTR(pwm, S_IWUSR | S_IRUGO, show_pwm, set_pwm, 6);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, show_fan_input, NULL, 0);
 static SENSOR_DEVICE_ATTR(fan2_input, S_IRUGO, show_fan_input, NULL, 1);
 static SENSOR_DEVICE_ATTR(fan3_input, S_IRUGO, show_fan_input, NULL, 2);
@@ -220,6 +239,9 @@ static SENSOR_DEVICE_ATTR(temp2_input, S_IRUGO, show_temp_input, NULL, 2);
 static SENSOR_DEVICE_ATTR(temp3_input, S_IRUGO, show_temp_input, NULL, 3);
 static SENSOR_DEVICE_ATTR(temp4_input, S_IRUGO, show_temp_input, NULL, 4);
 static SENSOR_DEVICE_ATTR(temp5_input, S_IRUGO, show_temp_input, NULL, 5);
+
+static struct attribute *pwm_manual_attrs =
+	&sensor_dev_attr_pwm.dev_attr.attr;
 
 static struct attribute *pwm_attrs[] = {
 	&sensor_dev_attr_pwm1.dev_attr.attr,
@@ -315,6 +337,8 @@ static int fan_probe(struct platform_device *pdev)
 	for (i = 0; i < fi->temp_num; i++) {
 		err += sysfs_create_file(&pdev->dev.kobj, temp_input_attrs[i]);
 	}
+
+	err += sysfs_create_file(&pdev->dev.kobj, pwm_manual_attrs);
 
 	if (err < 0) {
 		return -1;

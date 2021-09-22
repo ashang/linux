@@ -52,6 +52,7 @@ struct fan_info {
 
 	// pwm: same to fan, not fanr
 	u8 pwm[FAN_NUM_MAX];
+	u8 pwm_manual; /* 0 means auto mode, 1-255 means pwm value */
 
 	// temperature
 	int temp_num;
