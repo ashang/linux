@@ -340,7 +340,7 @@ config USB_EHCI_XGS_IPROC
 	bool "BRCM XGS iProc EHCI patch"
 	depends on (ARCH_IPROC && USB_EHCI_HCD_PLATFORM)
 	default n
-	---help---
+	help
 	  This option is for BRCM XGS iProc EHCI patch
 
 config USB_OCTEON_EHCI
@@ -606,7 +606,7 @@ config USB_OHCI_XGS_IPROC
 	bool "BRCM XGS iProc OHCI patch"
 	depends on (ARCH_IPROC && USB_OHCI_HCD_PLATFORM)
 	default n
-	---help---
+	help
 	  This option is for BRCM XGS iProc OHCI patch
 
 config USB_OCTEON_OHCI

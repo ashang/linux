@@ -764,28 +764,7 @@ static void esdhc_of_set_clock(struct sdhci_host *host, unsigned int clock)
 		sdhci_writel(host, temp | ESDHC_HS400_WNDW_ADJUST, ESDHC_TBCTL);
 
 		esdhc_clock_enable(host, false);
-#if 1
 		esdhc_flush_async_fifo(host);
-#else
-		temp = sdhci_readl(host, ESDHC_DMA_SYSCTL);
-		temp |= ESDHC_FLUSH_ASYNC_FIFO;
-		sdhci_writel(host, temp, ESDHC_DMA_SYSCTL);
-	}
-
-	/* Wait max 20 ms */
-	timeout = ktime_add_ms(ktime_get(), 20);
-	while (1) {
-		bool timedout = ktime_after(ktime_get(), timeout);
-
-		if (sdhci_readl(host, ESDHC_PRSSTAT) & ESDHC_CLOCK_STABLE)
-			break;
-		if (timedout) {
-			pr_debug("%s: Internal clock never stabilised.\n",
-				mmc_hostname(host->mmc));
-			return;
-		}
-		udelay(10);
-#endif
 	}
 	esdhc_clock_enable(host, true);
 }

@@ -403,6 +403,7 @@ static int pca954x_init(struct i2c_client *client, struct pca954x *data)
 	else
 		data->last_chan = 0; /* Disconnect multiplexer */
 
+
 	ret = i2c_smbus_write_byte(client, data->last_chan);
 	if (ret < 0)
 		data->last_chan = 0;
@@ -478,6 +479,9 @@ static int pca954x_probe(struct i2c_client *client,
 			data->idle_state = MUX_IDLE_DISCONNECT;
 	}
 
+	/* force the first selection */
+	data->idle_state = (deselect_on_exit?MUX_IDLE_DISCONNECT:MUX_IDLE_AS_IS);
+
 	/*
 	 * Write the mux register at addr to verify
 	 * that the mux is in fact present. This also
@@ -489,14 +493,6 @@ static int pca954x_probe(struct i2c_client *client,
 		dev_warn(dev, "probe failed\n");
 		return -ENODEV;
 	}
-
-	data->last_chan = 0;		   /* force the first selection */
-	data->idle_state = (deselect_on_exit?MUX_IDLE_DISCONNECT:MUX_IDLE_AS_IS);
-
-	idle_disconnect_dt = np &&
-		of_property_read_bool(np, "i2c-mux-idle-disconnect");
-	if (idle_disconnect_dt)
-		data->idle_state = MUX_IDLE_DISCONNECT;
 
 	ret = pca954x_irq_setup(muxc);
 	if (ret)
