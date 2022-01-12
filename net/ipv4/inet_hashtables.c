@@ -647,11 +647,17 @@ int __inet_hash(struct sock *sk, struct sock *osk)
 		if (err)
 			goto unlock;
 	}
+
+#if 0
 	if (IS_ENABLED(CONFIG_IPV6) && sk->sk_reuseport &&
 		sk->sk_family == AF_INET6)
 		__sk_nulls_add_node_tail_rcu(sk, &ilb->nulls_head);
 	else
 		__sk_nulls_add_node_rcu(sk, &ilb->nulls_head);
+#else
+	__sk_nulls_add_node_rcu(sk, &ilb->nulls_head);
+#endif
+
 	inet_hash2(hashinfo, sk);
 	ilb->count++;
 	sock_set_flag(sk, SOCK_RCU_FREE);
