@@ -203,12 +203,34 @@ static void inet_hash2(struct inet_hashinfo *h, struct sock *sk)
 	ilb2 = inet_lhash2_bucket_sk(h, sk);
 
 	spin_lock(&ilb2->lock);
+#if 0
 	if (sk->sk_reuseport && sk->sk_family == AF_INET6)
 		hlist_add_tail_rcu(&inet_csk(sk)->icsk_listen_portaddr_node,
 				   &ilb2->head);
 	else
 		hlist_add_head_rcu(&inet_csk(sk)->icsk_listen_portaddr_node,
 				   &ilb2->head);
+
+#else
+	if (!sk->sk_bound_dev_if)
+		hlist_add_tail_rcu(&inet_csk(sk)->icsk_listen_portaddr_node,
+				   &ilb2->head);
+	else {
+		struct net_device *bif = dev_get_by_index(&init_net,
+							  sk->sk_bound_dev_if);
+
+		if (!bif || (!netif_is_l3_master(bif) && !netif_is_l3_slave(bif)))
+			hlist_add_tail_rcu(&inet_csk(sk)->icsk_listen_portaddr_node,
+					   &ilb2->head);
+		else
+			hlist_add_head_rcu(&inet_csk(sk)->icsk_listen_portaddr_node,
+					   &ilb2->head);
+
+		if (bif)
+			dev_put(bif);
+	}
+#endif
+
 	ilb2->count++;
 	spin_unlock(&ilb2->lock);
 }
@@ -654,8 +676,22 @@ int __inet_hash(struct sock *sk, struct sock *osk)
 		__sk_nulls_add_node_tail_rcu(sk, &ilb->nulls_head);
 	else
 		__sk_nulls_add_node_rcu(sk, &ilb->nulls_head);
+
 #else
-	__sk_nulls_add_node_rcu(sk, &ilb->nulls_head);
+	if (!sk->sk_bound_dev_if)
+		__sk_nulls_add_node_tail_rcu(sk, &ilb->nulls_head);
+	else {
+		struct net_device *bif = dev_get_by_index(&init_net,
+							  sk->sk_bound_dev_if);
+
+		if (!bif || (!netif_is_l3_master(bif) && !netif_is_l3_slave(bif)))
+			__sk_nulls_add_node_tail_rcu(sk, &ilb->nulls_head);
+		else
+			__sk_nulls_add_node_rcu(sk, &ilb->nulls_head);
+
+		if(bif)
+			dev_put(bif);
+	}
 #endif
 
 	inet_hash2(hashinfo, sk);
