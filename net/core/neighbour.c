@@ -156,7 +156,7 @@ static bool neigh_update_ext_learned(struct neighbour *neigh, u32 flags,
 				     int *notify)
 {
 	bool rc = false;
-	u8 ndm_flags;
+	u32 ndm_flags;
 
 	if (!(flags & NEIGH_UPDATE_F_ADMIN))
 		return rc;
@@ -375,7 +375,7 @@ EXPORT_SYMBOL(neigh_ifdown);
 
 static struct neighbour *neigh_alloc(struct neigh_table *tbl,
 				     struct net_device *dev,
-				     bool exempt_from_gc)
+				     u32 flags, bool exempt_from_gc)
 {
 	struct neighbour *n = NULL;
 	unsigned long now = jiffies;
@@ -408,6 +408,7 @@ do_alloc:
 	n->updated	  = n->used = now;
 	n->nud_state	  = NUD_NONE;
 	n->output	  = neigh_blackhole;
+	n->flags	  = flags;
 	seqlock_init(&n->hh.hh_lock);
 	n->parms	  = neigh_parms_clone(&tbl->parms);
 	timer_setup(&n->timer, neigh_timer_handler, 0);
@@ -571,19 +572,18 @@ struct neighbour *neigh_lookup_nodev(struct neigh_table *tbl, struct net *net,
 }
 EXPORT_SYMBOL(neigh_lookup_nodev);
 
-static struct neighbour *___neigh_create(struct neigh_table *tbl,
-					 const void *pkey,
-					 struct net_device *dev,
-					 bool exempt_from_gc, bool want_ref)
+static struct neighbour *
+___neigh_create(struct neigh_table *tbl, const void *pkey,
+		struct net_device *dev, u32 flags,
+		bool exempt_from_gc, bool want_ref)
 {
-	struct neighbour *n1, *rc, *n = neigh_alloc(tbl, dev, exempt_from_gc);
-	u32 hash_val;
-	unsigned int key_len = tbl->key_len;
-	int error;
+	u32 hash_val, key_len = tbl->key_len;
+	struct neighbour *n1, *rc, *n;
 	struct neigh_hash_table *nht;
+	int error;
 
+	n = neigh_alloc(tbl, dev, flags, exempt_from_gc);
 	trace_neigh_create(tbl, dev, pkey, n, exempt_from_gc);
-
 	if (!n) {
 		rc = ERR_PTR(-ENOBUFS);
 		goto out;
@@ -670,7 +670,7 @@ out_neigh_release:
 struct neighbour *__neigh_create(struct neigh_table *tbl, const void *pkey,
 				 struct net_device *dev, bool want_ref)
 {
-	return ___neigh_create(tbl, pkey, dev, false, want_ref);
+	return ___neigh_create(tbl, pkey, dev, 0, false, want_ref);
 }
 EXPORT_SYMBOL(__neigh_create);
 
@@ -1786,6 +1786,7 @@ const struct nla_policy nda_policy[NDA_MAX+1] = {
 	[NDA_MASTER]		= { .type = NLA_U32 },
 	[NDA_PROTOCOL]		= { .type = NLA_U8 },
 	[NDA_NH_ID]		= { .type = NLA_U32 },
+	[NDA_FLAGS_EXT]		= { .type = NLA_U32 },
 	[NDA_FDB_EXT_ATTRS]	= { .type = NLA_NESTED },
 };
 
@@ -1858,7 +1859,7 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 		     struct netlink_ext_ack *extack)
 {
 	int flags = NEIGH_UPDATE_F_ADMIN | NEIGH_UPDATE_F_OVERRIDE |
-		NEIGH_UPDATE_F_OVERRIDE_ISROUTER;
+		    NEIGH_UPDATE_F_OVERRIDE_ISROUTER;
 	struct net *net = sock_net(skb->sk);
 	struct ndmsg *ndm;
 	struct nlattr *tb[NDA_MAX+1];
@@ -1867,6 +1868,7 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 	struct neighbour *neigh;
 	void *dst, *lladdr;
 	u8 protocol = 0;
+	u32 ndm_flags;
 	int err;
 
 	ASSERT_RTNL();
@@ -1882,6 +1884,16 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 	}
 
 	ndm = nlmsg_data(nlh);
+	ndm_flags = ndm->ndm_flags;
+	if (tb[NDA_FLAGS_EXT]) {
+		u32 ext = nla_get_u32(tb[NDA_FLAGS_EXT]);
+
+		if (ext & ~0) {
+			NL_SET_ERR_MSG(extack, "Invalid extended flags");
+			goto out;
+		}
+		ndm_flags |= (ext << NTF_EXT_SHIFT);
+	}
 	if (ndm->ndm_ifindex) {
 		dev = __dev_get_by_index(net, ndm->ndm_ifindex);
 		if (dev == NULL) {
@@ -1909,14 +1921,13 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 
 	if (tb[NDA_PROTOCOL])
 		protocol = nla_get_u8(tb[NDA_PROTOCOL]);
-
-	if (ndm->ndm_flags & NTF_PROXY) {
+	if (ndm_flags & NTF_PROXY) {
 		struct pneigh_entry *pn;
 
 		err = -ENOBUFS;
 		pn = pneigh_lookup(tbl, net, dst, dev, 1);
 		if (pn) {
-			pn->flags = ndm->ndm_flags;
+			pn->flags = ndm_flags;
 			if (protocol)
 				pn->protocol = protocol;
 			err = 0;
@@ -1944,8 +1955,10 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 		}
 
 		exempt_from_gc = ndm->ndm_state & NUD_PERMANENT ||
-				 ndm->ndm_flags & NTF_EXT_LEARNED;
-		neigh = ___neigh_create(tbl, dst, dev, exempt_from_gc, true);
+				 ndm_flags & NTF_EXT_LEARNED;
+		neigh = ___neigh_create(tbl, dst, dev,
+					ndm_flags & NTF_EXT_LEARNED,
+					exempt_from_gc, true);
 		if (IS_ERR(neigh)) {
 			err = PTR_ERR(neigh);
 			goto out;
@@ -1965,13 +1978,13 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 	if (protocol)
 		neigh->protocol = protocol;
 
-	if (ndm->ndm_flags & NTF_EXT_LEARNED)
+	if (ndm_flags & NTF_EXT_LEARNED)
 		flags |= NEIGH_UPDATE_F_EXT_LEARNED;
 
-	if (ndm->ndm_flags & NTF_ROUTER)
+	if (ndm_flags & NTF_ROUTER)
 		flags |= NEIGH_UPDATE_F_ISROUTER;
 
-	if (ndm->ndm_flags & NTF_USE) {
+	if (ndm_flags & NTF_USE) {
 		neigh_event_send(neigh, NULL);
 		err = 0;
 	} else
@@ -2430,6 +2443,7 @@ out:
 static int neigh_fill_info(struct sk_buff *skb, struct neighbour *neigh,
 			   u32 pid, u32 seq, int type, unsigned int flags)
 {
+	u32 neigh_flags, neigh_flags_ext;
 	unsigned long now = jiffies;
 	struct nda_cacheinfo ci;
 	struct nlmsghdr *nlh;
@@ -2439,11 +2453,14 @@ static int neigh_fill_info(struct sk_buff *skb, struct neighbour *neigh,
 	if (nlh == NULL)
 		return -EMSGSIZE;
 
+	neigh_flags_ext = neigh->flags >> NTF_EXT_SHIFT;
+	neigh_flags     = neigh->flags & NTF_OLD_MASK;
+
 	ndm = nlmsg_data(nlh);
 	ndm->ndm_family	 = neigh->ops->family;
 	ndm->ndm_pad1    = 0;
 	ndm->ndm_pad2    = 0;
-	ndm->ndm_flags	 = neigh->flags;
+	ndm->ndm_flags	 = neigh_flags;
 	ndm->ndm_type	 = neigh->type;
 	ndm->ndm_ifindex = neigh->dev->ifindex;
 
@@ -2474,6 +2491,8 @@ static int neigh_fill_info(struct sk_buff *skb, struct neighbour *neigh,
 
 	if (neigh->protocol && nla_put_u8(skb, NDA_PROTOCOL, neigh->protocol))
 		goto nla_put_failure;
+	if (neigh_flags_ext && nla_put_u32(skb, NDA_FLAGS_EXT, neigh_flags_ext))
+		goto nla_put_failure;
 
 	nlmsg_end(skb, nlh);
 	return 0;
@@ -2487,6 +2506,7 @@ static int pneigh_fill_info(struct sk_buff *skb, struct pneigh_entry *pn,
 			    u32 pid, u32 seq, int type, unsigned int flags,
 			    struct neigh_table *tbl)
 {
+	u32 neigh_flags, neigh_flags_ext;
 	struct nlmsghdr *nlh;
 	struct ndmsg *ndm;
 
@@ -2494,11 +2514,14 @@ static int pneigh_fill_info(struct sk_buff *skb, struct pneigh_entry *pn,
 	if (nlh == NULL)
 		return -EMSGSIZE;
 
+	neigh_flags_ext = pn->flags >> NTF_EXT_SHIFT;
+	neigh_flags     = pn->flags & NTF_OLD_MASK;
+
 	ndm = nlmsg_data(nlh);
 	ndm->ndm_family	 = tbl->family;
 	ndm->ndm_pad1    = 0;
 	ndm->ndm_pad2    = 0;
-	ndm->ndm_flags	 = pn->flags | NTF_PROXY;
+	ndm->ndm_flags	 = neigh_flags | NTF_PROXY;
 	ndm->ndm_type	 = RTN_UNICAST;
 	ndm->ndm_ifindex = pn->dev ? pn->dev->ifindex : 0;
 	ndm->ndm_state	 = NUD_NONE;
@@ -2507,6 +2530,8 @@ static int pneigh_fill_info(struct sk_buff *skb, struct pneigh_entry *pn,
 		goto nla_put_failure;
 
 	if (pn->protocol && nla_put_u8(skb, NDA_PROTOCOL, pn->protocol))
+		goto nla_put_failure;
+	if (neigh_flags_ext && nla_put_u32(skb, NDA_FLAGS_EXT, neigh_flags_ext))
 		goto nla_put_failure;
 
 	nlmsg_end(skb, nlh);
@@ -2816,6 +2841,7 @@ static inline size_t neigh_nlmsg_size(void)
 	       + nla_total_size(MAX_ADDR_LEN) /* NDA_LLADDR */
 	       + nla_total_size(sizeof(struct nda_cacheinfo))
 	       + nla_total_size(4)  /* NDA_PROBES */
+	       + nla_total_size(4)  /* NDA_FLAGS_EXT */
 	       + nla_total_size(1); /* NDA_PROTOCOL */
 }
 
@@ -2844,6 +2870,7 @@ static inline size_t pneigh_nlmsg_size(void)
 {
 	return NLMSG_ALIGN(sizeof(struct ndmsg))
 	       + nla_total_size(MAX_ADDR_LEN) /* NDA_DST */
+	       + nla_total_size(4)  /* NDA_FLAGS_EXT */
 	       + nla_total_size(1); /* NDA_PROTOCOL */
 }
 
