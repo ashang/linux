@@ -1887,11 +1887,6 @@ static int neigh_add(struct sk_buff *skb, struct nlmsghdr *nlh,
 	ndm_flags = ndm->ndm_flags;
 	if (tb[NDA_FLAGS_EXT]) {
 		u32 ext = nla_get_u32(tb[NDA_FLAGS_EXT]);
-
-		if (ext & ~0) {
-			NL_SET_ERR_MSG(extack, "Invalid extended flags");
-			goto out;
-		}
 		ndm_flags |= (ext << NTF_EXT_SHIFT);
 	}
 	if (ndm->ndm_ifindex) {
