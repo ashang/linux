@@ -862,7 +862,7 @@ static int vxlan_fdb_nh_update(struct vxlan_dev *vxlan, struct vxlan_fdb *fdb,
 	int err = -EINVAL;
 
 	if (old_nh && old_nh->id == nhid)
-		return 0;
+		return 1;
 
 	nh = nexthop_find_by_id(vxlan->net, nhid);
 	if (!nh) {
