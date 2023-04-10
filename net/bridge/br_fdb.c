@@ -604,6 +604,10 @@ void br_fdb_update(struct net_bridge *br, struct net_bridge_port *source,
 				     !test_bit(BR_FDB_STICKY, &fdb->flags))) {
 				fdb->dst = source;
 				fdb_modified = true;
+
+				/* XX
+				 * switched to access port.
+				 */
 				/* Take over HW learned entry */
 				if (unlikely(test_bit(BR_FDB_ADDED_BY_EXT_LEARN,
 						      &fdb->flags)))
@@ -907,6 +911,22 @@ static int fdb_add_entry(struct net_bridge *br, struct net_bridge_port *source,
 		if (fdb->dst != source) {
 			fdb->dst = source;
 			modified = true;
+#if 0
+			/* XX
+			 * Maybe without NTF_USE by applications
+			 * Switch to access port for special case.
+			 */
+			if (!(ndm->ndm_flags & NTF_EXT_LEARNED)) {
+				if (test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags))
+					clear_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags);
+			}
+
+			/* needn't it */
+			if (!test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags)
+			    &&
+			    test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &flags2))
+				set_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags);
+#endif
 		}
 	}
 
@@ -935,6 +955,24 @@ static int fdb_add_entry(struct net_bridge *br, struct net_bridge_port *source,
 
 	if (fdb_handle_notify(fdb, notify))
 		modified = true;
+
+#if 1
+	/* XX
+	 * Specific change, allow external_learn
+	 * entries to become added_by_user
+	 *
+	 * Let SW/applications still control the learned entry.
+	 */
+	if (ndm->ndm_flags & NTF_EXT_LEARNED) {
+		if (!test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags))
+			modified = true;
+		set_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags);
+	} else {
+		if (test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags))
+			modified = true;
+		clear_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags);
+	}
+#endif
 
 	set_bit(BR_FDB_ADDED_BY_USER, &fdb->flags);
 
@@ -1229,8 +1267,14 @@ int br_fdb_external_learn_add(struct net_bridge *br, struct net_bridge_port *p,
 		if (test_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags)) {
 			/* Refresh entry */
 			fdb->used = jiffies;
-		} else if (!test_bit(BR_FDB_ADDED_BY_USER, &fdb->flags)) {
+		} else /*if (!test_bit(BR_FDB_ADDED_BY_USER, &fdb->flags))*/ {
 			/* Take over SW learned entry */
+
+			/* XX
+			 * Disable the "take over" behavior.
+			 * SW should continue to control this learnd entry.
+			 * Switch to network port.
+			 */
 			set_bit(BR_FDB_ADDED_BY_EXT_LEARN, &fdb->flags);
 			modified = true;
 		}
