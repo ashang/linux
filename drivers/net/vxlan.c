@@ -681,7 +681,7 @@ static int vxlan_fdb_replace(struct vxlan_fdb *f,
 
 	rd = vxlan_fdb_find_rdst(f, ip, port, vni, ifindex);
 	if (rd)
-		return 0;
+		return 1;
 
 	rd = list_first_entry_or_null(&f->remotes, struct vxlan_rdst, list);
 	if (!rd)
